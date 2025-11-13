@@ -1,5 +1,5 @@
 import { readJsonFile } from "./FileParser";
-import { Queen } from "../types/Queens";
+// import { Queen } from "../types/Queens";
 
 // reads username/password data
 // returns True or False if user is authenticated or not
@@ -20,9 +20,3 @@ export async function authUser(username: string, password: string): Promise<bool
     return true;
 }
 
-// registers user to the league
-// username, password (self-explanatory)
-// array of queens to register to the user's team
-export async function registerUser(username: string, password: string, team_name: string, queens: Array<Queen>): Promise<boolean> {
-    return true;
-}
