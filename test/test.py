@@ -3,12 +3,14 @@ from TestResult import TestResult
 from threading import Thread
 import argparse
 import time
+import os
 
 ''' class definition '''
 class BIT:
     # relatively constant #
     URL: str = "http://127.0.0.1:3000"
     port: int = 3000
+    databasePath = "../database/"
 
     # running list of results
     results = [TestResult]
@@ -26,6 +28,9 @@ class BIT:
             self.URL = url
         if port:
             self.port = port
+        
+        files = os.listdir(self.databasePath)
+        print(files)
     
 
     def run_all_tests(self):
@@ -49,3 +54,7 @@ class BIT:
             print(response)
         else:
             print('error!')
+
+
+if __name__ == '__main__':
+    bitInstance = BIT(False)
