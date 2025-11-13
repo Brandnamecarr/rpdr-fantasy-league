@@ -2,7 +2,7 @@
 // ways to add points
 enum PointManipulation {
     // positive changes
-    MAX_CHALLENGE_WIN = 15,
+    MAXI_CHALLENGE_WIN = 15,
     SNATCH_GAME_WIN = 20,
     MINI_CHALLENGE_WIN = 10,
     TOP_PLACEMENT = 10,
