@@ -1,0 +1,17 @@
+{
+    "League": {
+        "Name": "RPDR Fantasy League",
+        "Season_Number": 19,
+        "Season_Year": 2025,
+        "Commissioner": "Brandon Carr",
+        "Teams": 10
+    },
+    "Players": {
+        "Brandon": {
+            "Team_Name": "Brandon's Baddies",
+            "Points": 0,
+            "Rank": 1,
+            "Queens": []
+        }
+    }
+}
