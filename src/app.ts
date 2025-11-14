@@ -9,8 +9,9 @@ import * as fs from 'fs';
 // application imports // 
 import {readJsonFile} from "./services/FileParser";
 import { LoginRequest } from './types/CustomRequests';
-import { authUser, registerUser } from './services/Auth';
+import { authUser } from './services/Auth';
 import {DataStructure, User} from './types/BasicUser';
+import { registerUser } from './services/User';
 
 // app stuff
 const app = express();
@@ -37,7 +38,8 @@ app.get('/statusPage', (req: Request, res: Response) => {
 }); // statusPage route //
 
 // authentication route //
-app.post('/auth', async (req: LoginRequest, res: Response) => {
+app.get('/auth', async (req: LoginRequest, res: Response) => {
+  console.log(req);
   const { username, password } = req.body;
 
   if (!username || !password) {
@@ -68,6 +70,16 @@ app.post('/auth', async (req: LoginRequest, res: Response) => {
   
 }); // /auth //
 
+// registration route //
+app.get('/userRegistration', async (req, res) => {
+  res.send('TODO: Implement userRegistration');
+}); // userRegistration //
+
+// league creation route //
+app.get('/createNewLeague', async (req, res) => {
+  res.send('TODO: Implement leagueCreation (eventually');
+}); // leagueCreation //
+
 app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
+  console.log(`✅ Server running at http://127.0.0.1:${PORT}`);
 });
