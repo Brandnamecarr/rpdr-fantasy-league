@@ -8,7 +8,7 @@ import * as fs from 'fs';
 
 // application imports // 
 import {readJsonFile} from "./services/FileParser";
-import { LoginRequest } from './types/LoginRequest';
+import { LoginRequest } from './types/CustomRequests';
 import { authUser, registerUser } from './services/Auth';
 import {DataStructure, User} from './types/BasicUser';
 
