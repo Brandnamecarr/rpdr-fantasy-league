@@ -10,12 +10,20 @@ export async function authUser(username: string, password: string): Promise<bool
         const temp = JSON.parse(users);
         const user = temp.Users[username];
         // TODO: More validation here.
-        return true;
-    }
+        if (user.password == password) {
+            console.log('passwords match. returning true');
+            return true;
+        }
+        else
+        {
+            console.log('Passwords dont match');
+            return false;
+        }
+    } // try //
     catch (error) {
         console.error('An error occurred while authenticating user: ', username);
         return false;
-    }
+    } // catch //
 
     return true;
 }
