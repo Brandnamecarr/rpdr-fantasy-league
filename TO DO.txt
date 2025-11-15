@@ -15,3 +15,8 @@ LEAGUEOPS:
 TESTING:
 - Build up test/ with python script to test endpoints
 - Can generate fake data faster
+
+
+BETA RELEASE FEATURE:
+- Log user actions to determine what is breaking when users do things
+- Just write to json file or mongo
