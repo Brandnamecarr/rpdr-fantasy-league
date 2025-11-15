@@ -9,14 +9,7 @@ export async function authUser(username: string, password: string): Promise<bool
         const users = readJsonFile('database/users.json');
         console.log('printing users:');
         console.log(users);
-        // if(users.length == 0)
-        //     {
-        //         console.log('length of users is 0!');
-        //     }
-        // else {
-        //     console.log(users.length);
-        // }
-        // const temp = JSON.parse(users);
+
         const user = users.Users[username];
         // TODO: More validation here.
         if (user.Password == password) {

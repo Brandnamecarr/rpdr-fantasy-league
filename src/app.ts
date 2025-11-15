@@ -12,6 +12,7 @@ import { LoginRequest } from './types/CustomRequests';
 import { authUser } from './services/Auth';
 import {UserAuthDataStructure, User} from './types/BasicUser';
 import { registerUser } from './services/User';
+import { PostgresAdapter } from './services/PostgresAdapter';
 
 // app stuff
 const app = express();
@@ -19,19 +20,40 @@ const PORT = 3000;
 
 app.use(express.json());
 
+async function doPGTest(): Promise<boolean> {
+    const pgData = fs.readFileSync('config/pg_config.json', 'utf-8');
+    const parsedData = JSON.parse(pgData);
+    console.log(parsedData);
+
+    const dbService = new PostgresAdapter(parsedData);
+    let result = await dbService.testConnection();
+    if(result) {
+      return true;
+    }
+    return false;
+}
+
 // main echo line to verify connectivity
-app.get('/', (req: Request, res: Response) => {
+app.get('/', async (req: Request, res: Response) => {
 //   res.send('Hello from Express + TypeScript 🚀');
     // res.send(readJsonFile('database/data.json'));
 
     // let data: DataStructure = readJsonFile('database/users.json');
-    const rawData = fs.readFileSync('database/users.json', 'utf-8');
-    const data: UserAuthDataStructure = JSON.parse(rawData);
-    const user = data.Users['Hannah'];
-    res.send({
-      username: "Hannah",
-      password: user.Password
-    });
+    // const rawData = fs.readFileSync('database/users.json', 'utf-8');
+    // const data: UserAuthDataStructure = JSON.parse(rawData);
+    // const user = data.Users['Hannah'];
+    // res.send({
+    //   username: "Hannah",
+    //   password: user.Password
+    // });
+    
+    let result = await doPGTest();
+    if (result) {
+      res.send('CONNECTED TO PG');
+    }
+    else {
+      res.send('NOT CONNECTED TO PG');
+    }
 }); // home route // 
 
 // status page of services and testing results //

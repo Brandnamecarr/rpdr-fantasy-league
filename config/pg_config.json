@@ -1,0 +1,9 @@
+{
+    "user": "postgres",
+    "host": "localhost",
+    "database": "RPDR-FANTASY",
+    "password": "admin",
+    "port": 5432,
+    "maxClients": 20,
+    "idleTimeoutMillis": 30000
+}
