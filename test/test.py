@@ -63,13 +63,35 @@ class BIT:
             time.sleep(self.testing_thread_timer) # sleep for configurable time
 
     # tests that users can authenticate to the system
-    def userAuthTest(self) -> TestResult:
-        
+    def userAuthTest(self) -> list[TestResult]:
+        testList = []
         authURL = f"{self.URL}:{self.port}/auth"
+
+        # correct password test
         body = {
             "username": "Hannah",
-            "password" "Banana"
+            "password": "Banana"
         }
+        try:
+            response = requests.post(authURL, json=body)
+            print(response)
+            if response:
+                print('got response back:')
+                print(response)
+            else:
+                print('error!')
+            
+            tr = TestResult('User Authentication Test (Correct Password)', True, '')
+            testList.append(tr)
+        except Exception as e:
+            tr = TestResult('User Authentication Test (Corret Password)', False, str(e))
+            testList.append(tr)
+        
+        # incorrect password test
+        body = {
+                "username": "Brandon",
+                "password": "IncorrectPW"
+            }
         try:
             response = requests.post(authURL, json=body)
             if response:
@@ -78,11 +100,14 @@ class BIT:
             else:
                 print('error!')
             
-            tr = TestResult('User Authentication Test', True, '')
-            return tr
+            tr = TestResult('User Authentication Test (Inorrect Password)', True, '')
+            testList.append(tr)
         except Exception as e:
-            tr = TestResult('User Authentication Test', False, str(e))
-            return tr
+            tr = TestResult('User Authentication Test (Inorret Password)', False, str(e))
+            testList.append(tr)
+        
+        return testList
+
 
     # tests that users can register their team to a league
     def userRegistrationTest(self) -> TestResult:
@@ -90,7 +115,7 @@ class BIT:
         body = {
             "league_name": "RPDR Fantasy League",
             "username": "Hannah",
-            "password" "Banana",
+            "password": "Banana",
             "team_name": "Hannah's Hotties",
             "queens": ["Bianca Del Rio", "Plane Jane", "Jimbo", "Trinity the Tuck"]
         }

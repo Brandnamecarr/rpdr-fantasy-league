@@ -10,12 +10,14 @@ import * as fs from 'fs';
 import {readJsonFile} from "./services/FileParser";
 import { LoginRequest } from './types/CustomRequests';
 import { authUser } from './services/Auth';
-import {DataStructure, User} from './types/BasicUser';
+import {UserAuthDataStructure, User} from './types/BasicUser';
 import { registerUser } from './services/User';
 
 // app stuff
 const app = express();
 const PORT = 3000;
+
+app.use(express.json());
 
 // main echo line to verify connectivity
 app.get('/', (req: Request, res: Response) => {
@@ -24,7 +26,7 @@ app.get('/', (req: Request, res: Response) => {
 
     // let data: DataStructure = readJsonFile('database/users.json');
     const rawData = fs.readFileSync('database/users.json', 'utf-8');
-    const data: DataStructure = JSON.parse(rawData);
+    const data: UserAuthDataStructure = JSON.parse(rawData);
     const user = data.Users['Hannah'];
     res.send({
       username: "Hannah",
@@ -38,9 +40,11 @@ app.get('/statusPage', (req: Request, res: Response) => {
 }); // statusPage route //
 
 // authentication route //
-app.get('/auth', async (req: LoginRequest, res: Response) => {
-  console.log(req);
+app.post('/auth', async (req: LoginRequest, res: Response) => {
+  console.log(req.body);
   const { username, password } = req.body;
+  console.log(username);
+  console.log(password);
 
   if (!username || !password) {
     return res.status(400).json({
