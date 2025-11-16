@@ -17,7 +17,7 @@ import { PostgresAdapter } from './services/PostgresAdapter';
 // app stuff
 const app = express();
 const PORT = 3000;
-
+// so app can decode json values (I think)
 app.use(express.json());
 
 async function doPGTest(): Promise<boolean> {

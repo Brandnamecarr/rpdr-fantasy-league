@@ -16,6 +16,8 @@ TESTING:
 - Build up test/ with python script to test endpoints
 - Can generate fake data faster
 
+MV:
+- need to conform to route/controller/service format.
 
 BETA RELEASE FEATURE:
 - Log user actions to determine what is breaking when users do things
