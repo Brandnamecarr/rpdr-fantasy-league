@@ -1,4 +1,0 @@
-
-export function initLeague(): void {
-    
-}

@@ -31,8 +31,12 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns A Promise that resolves to a boolean indicating if the passwords match.
  */
 export async function comparePassword(plaintextPassword: string, hash: string): Promise<boolean> {
+    console.log('inside the comparePasswords function');
+    console.log(plaintextPassword);
+    console.log(hash);
     try {
         const isMatch = await bcrypt.compare(plaintextPassword, hash);
+        console.log('isMatch: ', isMatch);
         return isMatch;
     } catch (error) {
         console.error("Error comparing password:", error);

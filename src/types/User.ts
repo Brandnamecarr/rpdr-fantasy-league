@@ -1,4 +1,4 @@
-import { Queen } from "./Queens";
+import { Queen } from "./Queen";
 
 export class User {
     username: string;

@@ -1,3 +1,3 @@
 
-echo "Starting ts app"
-npx ts-node src/app.ts
+echo "Starting src/server.ts"
+npx ts-node src/server.ts

@@ -1,5 +1,5 @@
 import {Request} from 'express';
-import { Queen } from './Queens';
+import { Queen } from './Queen';
 
 export interface LoginRequest extends Request {
     body: {

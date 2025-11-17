@@ -1,4 +1,4 @@
 #!/bin/bash
 
-npx ts-node src/app.ts
+npx ts-node src/server.ts
 
