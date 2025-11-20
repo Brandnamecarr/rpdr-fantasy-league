@@ -1,5 +1,4 @@
 import {Request} from 'express';
-import { Queen } from './Queen';
 
 export interface LoginRequest extends Request {
     body: {
@@ -13,7 +12,7 @@ export interface RegistrationRequest extends Request {
         username?: string;
         password?: string;
         team_name?: string;
-        queens?: Array<Queen>;
+        queens?: Array<string>;
     }
 }
 

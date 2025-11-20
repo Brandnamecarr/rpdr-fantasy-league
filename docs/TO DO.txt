@@ -13,3 +13,4 @@ BETA RELEASE FEATURE:
 
 HTTP REQUESTS:
 - implement some authentication (jwt, org ID, etc)
+    * goes into the routes to block unwanted access 

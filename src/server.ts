@@ -1,4 +1,5 @@
 import app from "./app";
+import logger from "./util/LoggerImpl";
 
 const PORT = 3000;
 

@@ -1,4 +1,5 @@
 import prisma from "../db/prisma.client";
+import logger from "../util/LoggerImpl";
 
 // returns users // 
 export const getUsers = () => {
@@ -6,7 +7,7 @@ export const getUsers = () => {
 };
 
 export const createUser = (name: string, email: string, password: string, teamName: string, queens: string[]) => {
-    console.log(name);
+    logger.info('User.Service.ts: creating user: ', {email: email});
     // TODO Hash Password here ? before it goes to DB.
     return prisma.user.create({
         data: {
@@ -21,6 +22,7 @@ export const createUser = (name: string, email: string, password: string, teamNa
 
 // gets the user record by name.
 export const getUserByName = (username: string) => {
+    logger.info('User.Service.ts: finding user in database: ', {username: username});
     return prisma.user.findUnique({
         where: {
             username,

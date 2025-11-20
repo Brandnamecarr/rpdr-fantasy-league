@@ -97,7 +97,7 @@ class BIT:
             "TODO": "Populate with data"
         }
         try:
-            response = request.post(leagueCreationUrl, json=body)
+            response = requests.post(leagueCreationUrl, json=body)
             tr = TestResult('League Creation Test', True, '')
             return tr
         except Exception as e:
