@@ -1,0 +1,15 @@
+
+USERS:
+    - not sure i need a username AND an email 
+
+TESTING:
+- Rework testing framework
+- ping server endpoints with test data
+- can treat more like unit tests
+
+BETA RELEASE FEATURE:
+- Log user actions to determine what is breaking when users do things
+- Just write to json file or mongo
+
+HTTP REQUESTS:
+- implement some authentication (jwt, org ID, etc)

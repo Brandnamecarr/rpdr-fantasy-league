@@ -16,3 +16,11 @@ export interface RegistrationRequest extends Request {
         queens?: Array<Queen>;
     }
 }
+
+export interface LeagueCreationRequest extends Request {
+    body: {
+        leaguename?: string;
+        maxPlayers?: number;
+        owner?: string; // maybe ? // 
+    }
+}
