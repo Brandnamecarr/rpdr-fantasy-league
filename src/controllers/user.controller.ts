@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as userService from "../services/user.service";
 import * as passwordManager from "../util/PasswordManager";
+import logger from "../util/LoggerImpl";
 
 // returns all users //
 export const getUsers = async (req: Request, res: Response) => {
@@ -20,6 +21,18 @@ export const createUser = async (req: Request, res: Response) => {
     } catch(error) {
         console.error(error);
         res.status(500).json({error: "Failed to create user"});
+    }
+};
+
+export const updateLeague = async (req: Request, res: Response) => {
+    const {email, league} = req.body;
+
+    try {
+        const response = await userService.updateLeague(email, league);
+        res.status(201).json(response);
+    } catch (error) {
+        console.log(error);
+        res.status(404).json({error: "Error adding user to league"});
     }
 };
 

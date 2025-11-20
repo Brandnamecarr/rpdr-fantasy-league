@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as leagueOpsService from '../services/leagueOps.service';
+import logger from "../util/LoggerImpl";
 
 // weekly update //
 export const weeklyUpdate = async (req: Request, res: Response) => {

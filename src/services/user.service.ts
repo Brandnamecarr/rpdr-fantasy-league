@@ -20,6 +20,10 @@ export const createUser = (name: string, email: string, password: string, teamNa
     });
 };
 
+export const updateLeague = (email: string, league: string) => {
+    
+};
+
 // gets the user record by name.
 export const getUserByName = (username: string) => {
     logger.info('User.Service.ts: finding user in database: ', {username: username});

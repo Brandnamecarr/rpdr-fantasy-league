@@ -1,6 +1,7 @@
 
 USERS:
     - not sure i need a username AND an email 
+    - email will suffice... 
 
 TESTING:
 - Rework testing framework
@@ -9,7 +10,8 @@ TESTING:
 
 BETA RELEASE FEATURE:
 - Log user actions to determine what is breaking when users do things
-- Just write to json file or mongo
+- Just write to json file
+- implemented in form of logger!
 
 HTTP REQUESTS:
 - implement some authentication (jwt, org ID, etc)

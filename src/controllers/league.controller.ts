@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import * as leagueService from "../services/league.service";
+import logger from "../util/LoggerImpl";
 
 // get record of specific league //
 export const getLeague = async (req: Request, res: Response) => {

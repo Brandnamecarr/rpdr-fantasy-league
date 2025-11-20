@@ -1,4 +1,5 @@
 import prisma from "../db/prisma.client";
+import logger from "../util/LoggerImpl";
 
 // returns specific league by name // 
 export const getLeague = (leaguename: string) => {
