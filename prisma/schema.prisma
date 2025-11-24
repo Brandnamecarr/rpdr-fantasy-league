@@ -9,10 +9,25 @@ generator client {
 
 model User {
   id    Int     @id @default(autoincrement())
-  username  String @unique
   email String  @unique
   password String
+  createdAt DateTime @default(now())
+}
+
+model League {
+  id Int @id @default(autoincrement())
+  leagueName String @unique
+  owner String
+  users String[]
+  maxPlayers Int
+  createdAt DateTime @default(now())
+}
+
+model Roster {
+  recordId Int @id @default(autoincrement())
+  leagueName String 
+  username String
   teamName String
   queens String[]
-  createdAt DateTime @default(now())
+  currentPoints Int
 }

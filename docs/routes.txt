@@ -1,0 +1,52 @@
+Doc to track the routes
+
+/users
+    /getAll
+        - Returns all users
+            PARAMS: None
+
+    /create
+        - Creates a new user
+            PARAMS: username:string, email:string, password:string, teamName:string, queens: [string]
+
+    /auth
+        - Authenticates a user to the system
+            PARAMS: username: string, password: string 
+
+/league
+    /getLeague 
+        - Returns a league by league by the name of the league 
+        PARAMS: leaguename:string
+
+    /getAllLeagues
+        - Returns all leagues and its data
+        PARAMS: None
+
+    /createLeague
+        - Creates a league
+        PARAMS: TBD
+
+    /addUser
+        - Adds a user to the list of competitors in the league 
+        PARAMS: username:string, leaguename: string
+
+    /removeUser
+        - Removes a user from the list of competitors in the league
+        PARAMS: username:string, leaguename: string
+
+/leagueOps
+
+    /weeklyUpdate
+        - Updates the standard data of the week (Winners, Losers, Tops, Bottoms, Safe, Lipsync Winner)
+        PARAMS: 
+                maxi_winner: string;
+                mini_winner: string;
+                tops: [string];
+                bottoms: [string];
+                eliminated: string;
+                lip sync winner: string;
+                
+    /weeklyPoll
+        - Handles toots/boots and iconic/cringe moments
+        PARAMS: (if each queen's runway was a toot/boot), which queens had iconic or cringe moment 
+/data

@@ -1,0 +1,16 @@
+{
+    "Leagues": {
+        "Name": "RPDR Fantasy League",
+        "Owner": "Brandon@test.com",
+        "MaxUsers": 10,
+        "Users": []
+    },
+    "Users": {
+        "Brandon@test.com": {
+            "Team_Name": "Brandon's Baddies",
+            "Points": 0,
+            "Rank": 1,
+            "Queens": ["Bianca Del Rio", "Shea Coulee"]
+        }
+    }
+}

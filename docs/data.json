@@ -1,0 +1,13 @@
+{
+    "User": {
+        "Email": "String",
+        "Password": "(String) => Plan Text Password --> Turned to hash in the DB",
+        "Team Name": "String",
+        "Queens": "String[] (Queens resolved by their name"
+    },
+    "League": {
+        "LeagueName": "String",
+        "MaxPlayers": "Number => Max number of players in the league",
+        "Users": "String[] => Users in the league (email)"
+    }
+}

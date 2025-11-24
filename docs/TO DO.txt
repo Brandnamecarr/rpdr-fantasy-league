@@ -1,0 +1,24 @@
+
+USERS:
+    - clear Postgres Table
+    - Rerun prisma migration script.
+
+TESTING:
+- Rework testing framework
+- ping server endpoints with test data
+- can treat more like unit tests
+- start once all data types migrated to Prima.
+
+BETA RELEASE FEATURE:
+- implemented in form of logger! 
+- need to integrate it with more services 
+- test during execution
+
+LEAGUEOPS:
+    - Need to implement a mechanism to receive data over HTTP
+    - Once this data is received, all scores and data points need to be adjusted.
+
+
+HTTP REQUESTS:
+- implement some authentication (jwt, org ID, etc)
+    * goes into the routes to block unwanted access 
