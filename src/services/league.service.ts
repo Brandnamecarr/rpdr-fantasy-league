@@ -3,37 +3,30 @@ import logger from "../util/LoggerImpl";
 
 // returns specific league by name // 
 export const getLeague = (leaguename: string) => {
+    logger.info('League.Service.ts: getting league with leaguename: ', {leagueName: leaguename});
     return prisma.league.findUnique({
         where: {
-            leaguename,
+            leagueName: leaguename,
         },
     });  
 };
 
 // returns records of all the leagues // 
 export const getAllLeagues = () => {
+    logger.info('League.Service.ts: loading all league records');
     return prisma.league.findMany();
 };
 
 // creates a league in the database // 
-export const createLeague = (datapoints: any) => {
+export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number) => {
     // TODO: make sure league name is unique //
+    logger.info('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers});
     return prisma.league.create({
-        where: {
-            datapoints,
+        data: {
+            leagueName: leaguename,
+            owner: owner,
+            users: users,
+            maxPlayers: maxPlayers
         },
     });
-};
-
-// add user to league // 
-export const addUserToLeague = (username: string, leaguename: string) => {
-    // load league data from db //
-    // get number of users registered to the league and the max number //
-    // add user if max users not yet reached //
-};
-
-// removes user from league // 
-export const removeUserFromLeague = (username: string, leaguename: string) => {
-    // load league data from db //
-    // if user is in the users, remove //
 };

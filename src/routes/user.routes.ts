@@ -6,6 +6,5 @@ const router = Router();
 router.get("/getAll", userController.getUsers);
 router.post("/create", userController.createUser);
 router.post("/auth", userController.authenticateUser);
-router.post("/updateLeague", userController.updateLeague);
 
 export default router;

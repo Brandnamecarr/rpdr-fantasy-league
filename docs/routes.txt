@@ -7,7 +7,7 @@ Doc to track the routes
 
     /create
         - Creates a new user
-            PARAMS: username:string, email:string, password:string, teamName:string, queens: [string]
+            PARAMS: email:string, password:string
 
     /auth
         - Authenticates a user to the system
@@ -26,15 +26,16 @@ Doc to track the routes
         - Creates a league
         PARAMS: TBD
 
-    /addUser
+ 
+
+/leagueOps (REFINE THIS LATER)
+       /addUser
         - Adds a user to the list of competitors in the league 
         PARAMS: username:string, leaguename: string
 
     /removeUser
         - Removes a user from the list of competitors in the league
         PARAMS: username:string, leaguename: string
-
-/leagueOps
 
     /weeklyUpdate
         - Updates the standard data of the week (Winners, Losers, Tops, Bottoms, Safe, Lipsync Winner)

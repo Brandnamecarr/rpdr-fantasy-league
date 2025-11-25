@@ -11,53 +11,42 @@ export const getUsers = async (req: Request, res: Response) => {
 
 // could override the Request here with a custom CreateRequest to make the code cleaner. //
 export const createUser = async (req: Request, res: Response) => {
-    const {username, email, password, teamName, queens} = req.body;
-    
+    const {email, password} = req.body;
+    logger.info('User.Controller.ts: createUser() called with email: ', {email:email, password:password});
     // handle the hashing of the password here //
     try {
         const hashedPassword = await passwordManager.hashPassword(password);
-        const user = await userService.createUser(username, email, hashedPassword, teamName, queens);
+        const user = await userService.createUser(email, hashedPassword);
+        logger.info('User.Controller.ts: returning status=201');
         res.status(201).json(user);
     } catch(error) {
         console.error(error);
+        logger.error('User.Controller.ts: error creating user, returning 500, error: ', {error:error});
         res.status(500).json({error: "Failed to create user"});
-    }
-};
-
-export const updateLeague = async (req: Request, res: Response) => {
-    const {email, league} = req.body;
-
-    try {
-        const response = await userService.updateLeague(email, league);
-        res.status(201).json(response);
-    } catch (error) {
-        console.log(error);
-        res.status(404).json({error: "Error adding user to league"});
     }
 };
 
 // authenticate user //
 export const authenticateUser = async (req: Request, res: Response) => {
-    console.log('here');
     const {username, password} = req.body;
-    console.log(username);
-    console.log(password);
+    logger.info("User.Controller.ts: authenticateUser() for : ", {username: username, password:password});
     try {
         const userRecord = await userService.getUserByName(username);
         if(!userRecord) {
+            console.error('User.Controller.ts: User Record not found for user, returning 400, user: ', {username: username});
             return res.status(404).json({error: "User not found"});
         }
-        console.log('got user record');
-        console.log('PT pw: ', userRecord.password);
+        logger.info('User.Controller.ts: User data: ', {data: userRecord});
         const passwordsDoMatch = await passwordManager.comparePassword(password, userRecord.password);
         if(!passwordsDoMatch) {
-            console.log('returning 401');
+            logger.info('User.Controller.ts: Passwords dont match, returning 401.', {});
             return res.status(401).json({error: "Invalid Password"});
         }
-        console.log('passwords match!');
+        logger.info('User.Controller.ts: Login successful for user: ', {username: username});
         res.json({status: "Login Successful"});
     } catch(error) {
         console.error(error);
+        logger.error('User.Controller.ts: error processing authentication.', {error: error});
         res.status(500).json({error: "Server Error"});
     }
 }; // authenticate user //
