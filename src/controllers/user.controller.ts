@@ -18,22 +18,39 @@ export const createUser = async (req: Request, res: Response) => {
         const hashedPassword = await passwordManager.hashPassword(password);
         const user = await userService.createUser(email, hashedPassword);
         logger.info('User.Controller.ts: returning status=201');
-        res.status(201).json(user);
+        res.status(201).json({email:email});
     } catch(error) {
-        console.error(error);
         logger.error('User.Controller.ts: error creating user, returning 500, error: ', {error:error});
         res.status(500).json({error: "Failed to create user"});
     }
 };
 
+// loads user record by name //
+export const getUserRecord = async (req: Request, res: Response) => {
+    const email = req.query.email as string | undefined;
+    if(!email) {
+        return res.status(400).json({message: "Missing required 'email' field"});
+    }
+    logger.info('User.Controller.ts: Loading user record for: ', {email:email});
+    try {
+        const userRecord = await userService.getUserRecord(email);
+        res.status(201).json({email: email, payload: userRecord});
+    } catch(error) {    
+        logger.error('User.Controller.ts: Error loading user record: ', {email: email});
+        res.status(500).json({email:email, message:"Error finding user in database", error: error});
+    }
+};
+
+
 // authenticate user //
 export const authenticateUser = async (req: Request, res: Response) => {
-    const {username, password} = req.body;
-    logger.info("User.Controller.ts: authenticateUser() for : ", {username: username, password:password});
+    const {email, password} = req.body;
+    logger.info("User.Controller.ts: authenticateUser() for : ", {username: email, password:password});
     try {
-        const userRecord = await userService.getUserByName(username);
+        const userRecord = await userService.getUserByName(email);
         if(!userRecord) {
-            console.error('User.Controller.ts: User Record not found for user, returning 400, user: ', {username: username});
+            logger.error('User.Controller.ts: User record not found for user, returning 400, user: ', {email:email});
+            console.error('User.Controller.ts: User Record not found for user, returning 400, user: ', {email: email});
             return res.status(404).json({error: "User not found"});
         }
         logger.info('User.Controller.ts: User data: ', {data: userRecord});
@@ -42,8 +59,8 @@ export const authenticateUser = async (req: Request, res: Response) => {
             logger.info('User.Controller.ts: Passwords dont match, returning 401.', {});
             return res.status(401).json({error: "Invalid Password"});
         }
-        logger.info('User.Controller.ts: Login successful for user: ', {username: username});
-        res.json({status: "Login Successful"});
+        logger.info('User.Controller.ts: Login successful for user: ', {email: email});
+        res.json({status: "Login Successful", email: email});
     } catch(error) {
         console.error(error);
         logger.error('User.Controller.ts: error processing authentication.', {error: error});

@@ -54,29 +54,39 @@ def handleServerResponse(response):
 # response = requests.post('http://127.0.0.1:3000/leagueOps/addUserToLeague', json=data)
 # handleServerResponse(response)
 
+# STEP 5: Do an authentication test for brandon and hannah
+hannahData = {
+    "email": "HannahBanana@test.com",
+    "password": "Pickle"
+}
+
+brandonData = {
+    "email": "Brandon@test.com",
+    "password": "TempPw"
+}
 
 ''' USE THIS LATER TO TEST WEEKLY UPDATES '''
-weekly_update_data = {
-    "maxiWinner": [],
-    "isSnatchGame": False,
-    "miniWinner": [],
-    "topsOfWeek": [],
-    "safeQueens": [],
-    "bottomsOfWeek": [],
-    "lipSyncWinner": [],
-    "eliminated": []s
-}
+# weekly_update_data = {
+#     "maxiWinner": [],
+#     "isSnatchGame": False,
+#     "miniWinner": [],
+#     "topsOfWeek": [],
+#     "safeQueens": [],
+#     "bottomsOfWeek": [],
+#     "lipSyncWinner": [],
+#     "eliminated": []
+# }
 
-response = requests.post('http://127.0.0.1:3000/leagueOps/weeklyUpdate', json=weekly_update_data)
-handleServerResponse(response)
+# response = requests.post('http://127.0.0.1:3000/leagueOps/weeklyUpdate', json=weekly_update_data)
+# handleServerResponse(response)
 
-weekly_summary_data = {
-    "toots": [],
-    "boots": [],
-    "iconicQueens": [],
-    "cringeQueens": []
-    "queenOfTheWeek": []
-}
+# weekly_summary_data = {
+#     "toots": [],
+#     "boots": [],
+#     "iconicQueens": [],
+#     "cringeQueens": [],
+#     "queenOfTheWeek": []
+# }
 
-response = requests.post("http://127.0.0.1:3000/leagueOps/weeklySurvey", json=weekly_summary_data)
-handleServerResponse(response)
+# response = requests.post("http://127.0.0.1:3000/leagueOps/weeklySurvey", json=weekly_summary_data)
+# handleServerResponse(response)

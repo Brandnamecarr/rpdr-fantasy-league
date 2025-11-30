@@ -35,7 +35,7 @@ export const weeklySurvey = (toots: Array<string>,
         // 
 };
 
-export const addUserToLeague = async (email: string, league: League, queens: Array<string>) => {
+export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>) => {
     logger.info('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
     // 1. Check to see if user is already registered for this league.
@@ -63,6 +63,7 @@ export const addUserToLeague = async (email: string, league: League, queens: Arr
             return await prisma.roster.create({
                 data: {
                     leagueName: league.leagueName,
+                    teamName: teamName,
                     username: email,
                     queens: queens,
                     currentPoints: 0
@@ -90,7 +91,12 @@ export const removeUserFromLeague = async (email: string, league: League) => {
             users: updatedUsersArray,
         };
         // 3. Update the table in the database
-        await prisma.league.update(league.id, updatePayload);
+        await prisma.league.update({
+            where: {
+                id: league.id,
+            },
+            data: updatePayload,
+        });
 
         // 4. Remove the corresponding record from the records table too 
         // TODO. 

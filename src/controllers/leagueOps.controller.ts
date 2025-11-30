@@ -35,7 +35,7 @@ export const weeklySurvey = async (req: Request, res: Response) => {
 
 // add user to league //
 export const addUserToLeague = async (req: Request, res: Response) => {
-    const {email, leagueName, queens} = req.body;
+    const {email, teamName, leagueName, queens} = req.body;
     try {
         const result = await leagueService.getLeague(leagueName);
         if(!result) {
@@ -45,7 +45,7 @@ export const addUserToLeague = async (req: Request, res: Response) => {
         }
         let league: League = result;
         console.log(league);
-        const resp = await leagueOpsService.addUserToLeague(email, league, queens);
+        const resp = await leagueOpsService.addUserToLeague(email, teamName, league, queens);
         res.status(201).json({message:"TODO"});
     } catch(error) {
         console.error(error);
