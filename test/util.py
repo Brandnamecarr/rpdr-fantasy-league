@@ -44,13 +44,39 @@ def handleServerResponse(response):
 
 # Brandon@test.com hashed pw: $2b$10$Em.4Qi3ugi5lnF3hAgbcTeYW.FO6IzNw22JPTTpZhVcc3IIZEJDnq
 
-Step 4: Register Brandon@test.com to Hannah's Hotties league
-this simulates joining an existing league, after registering for an account #
-data = {
-    "leagueName": "Hannah's Hotties",
-    "email": "Brandon@test.com",
-    "queens": ["Bianca Del Rio", "Adore Delano", "Plane Jane"]
+# Step 4: Register Brandon@test.com to Hannah's Hotties league
+# this simulates joining an existing league, after registering for an account #
+# data = {
+#     "leagueName": "Hannah's Hotties",
+#     "email": "Brandon@test.com",
+#     "queens": ["Bianca Del Rio", "Adore Delano", "Plane Jane"]
+# }
+# response = requests.post('http://127.0.0.1:3000/leagueOps/addUserToLeague', json=data)
+# handleServerResponse(response)
+
+
+''' USE THIS LATER TO TEST WEEKLY UPDATES '''
+weekly_update_data = {
+    "maxiWinner": [],
+    "isSnatchGame": False,
+    "miniWinner": [],
+    "topsOfWeek": [],
+    "safeQueens": [],
+    "bottomsOfWeek": [],
+    "lipSyncWinner": [],
+    "eliminated": []s
 }
-response = requests.post('http://127.0.0.1:3000/leagueOps/addUserToLeague', json=data)
+
+response = requests.post('http://127.0.0.1:3000/leagueOps/weeklyUpdate', json=weekly_update_data)
 handleServerResponse(response)
 
+weekly_summary_data = {
+    "toots": [],
+    "boots": [],
+    "iconicQueens": [],
+    "cringeQueens": []
+    "queenOfTheWeek": []
+}
+
+response = requests.post("http://127.0.0.1:3000/leagueOps/weeklySurvey", json=weekly_summary_data)
+handleServerResponse(response)

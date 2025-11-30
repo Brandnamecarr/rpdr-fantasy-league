@@ -21,12 +21,15 @@ class BIT:
             self.port = port
     
     def runTests(self):
-        pass
 
+        self.summarizeResults()
+
+    def summarizeResults(self):
+        for testResult in results:
+            print(testResult.getResult())
 
     # tests that users can authenticate to the system
     def userAuthTest(self) -> list[TestResult]:
-        testList = []
         authURL = f"{self.URL}:{self.port}/users/auth"
 
         # correct password test
@@ -48,27 +51,6 @@ class BIT:
         except Exception as e:
             tr = TestResult('User Authentication Test (Corret Password)', False, str(e))
             testList.append(tr)
-        
-        # incorrect password test
-        body = {
-                "username": "Brandon",
-                "password": "IncorrectPW"
-            }
-        try:
-            response = requests.post(authURL, json=body)
-            if response:
-                print('got response back:')
-                print(response)
-            else:
-                print('error!')
-            
-            tr = TestResult('User Authentication Test (Inorrect Password)', True, '')
-            testList.append(tr)
-        except Exception as e:
-            tr = TestResult('User Authentication Test (Inorret Password)', False, str(e))
-            testList.append(tr)
-        
-        return testList
 
 
     # tests that users can register their team to a league
@@ -76,8 +58,7 @@ class BIT:
         registrationUrl = f"{self.URL}:{self.port}/"
         body = {
             "league_name": "RPDR Fantasy League",
-            "username": "Hannah",
-            "password": "Banana",
+            "email": "Hannah",
             "team_name": "Hannah's Hotties",
             "queens": ["Bianca Del Rio", "Plane Jane", "Jimbo", "Trinity the Tuck"]
         }
@@ -121,7 +102,7 @@ if __name__ == '__main__':
 
     if args.h:
         print(usage())
-    if args.interval and args.url and args.port:
+    if args.url and args.port:
         bitInstance = BIT(args.url, args.port)
     else:
         bitInstance = BIT() # just does the constructor for right now

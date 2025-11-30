@@ -7,14 +7,27 @@ import {League, User, Roster} from '@prisma/client';
 
 // weekly update //
 export const weeklyUpdate = async (req: Request, res: Response) => {
-    const {weekNumber} = req.body;
+    const {maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
 
     try {
-        const resp = await leagueOpsService.weeklyUpdate(weekNumber);
+        const resp = await leagueOpsService.weeklyUpdate(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
         res.status(201).json(resp);
     } catch (error) {
         console.error(error);
         res.status(500).json({error: 'Error processing weekly update'});
+    }
+};
+
+// weekly survey //
+export const weeklySurvey = async (req: Request, res: Response) => {
+    const {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek} = req.body;
+
+    try {
+        const resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
+        res.status(201).json(resp);
+    } catch (error) {
+        logger.info('leagueOps.Controller.ts: Error with Weekly Survey', {error: error});
+        res.status(500).json({error: error});
     }
 };
 
@@ -42,7 +55,7 @@ export const addUserToLeague = async (req: Request, res: Response) => {
 
 // remove user from league //
 export const removeUserFromLeague = async (req: Request, res: Response) => {
-    const {username, leagueName} = req.body;
+    const {email, leagueName} = req.body;
     try {
         const result = await leagueService.getLeague(leagueName);
         if(!result) {
@@ -51,7 +64,7 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
             });
         } //if //
         let league:League = result;
-        const resp = await leagueOpsService.removeUserFromLeague(ElementInternals, league);
+        const resp = await leagueOpsService.removeUserFromLeague(email, league);
         res.status(201).json(resp);
     } catch (error) {
         console.error(error);

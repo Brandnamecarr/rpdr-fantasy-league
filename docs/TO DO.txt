@@ -7,7 +7,7 @@ TESTING:
 - Rework testing framework
 - ping server endpoints with test data
 - can treat more like unit tests
-- start once all data types migrated to Prima.
+- start once all data types migrated to Prisma.
 
 BETA RELEASE FEATURE:
 - implemented in form of logger! 
