@@ -30,7 +30,8 @@ class BIT:
     # data can be any dict # 
     def makePostReqWrapper(self, route: str, data: dict):
         # to do
-        url = ''
+        url = f"{self.HTTP}{self.IP}:{self.PORT}{self.route}"
+        print(f"connecting to server endpoint: {url}")
         header = {
             'Content-Type': 'application/json',
             'Authorization': f"{self.TOKEN}"
@@ -43,7 +44,12 @@ class BIT:
             return str(e)
     
     def runTests(self):
-
+        self.userAuthTest()
+        time.sleep(5)
+        self.userRegistrationTest()
+        time.sleep(5)
+        self.leagueCreationTest()
+        time.sleep(5)
         self.summarizeResults()
 
     def summarizeResults(self):
@@ -51,33 +57,27 @@ class BIT:
         pass
 
     # tests that users can authenticate to the system
-    def userAuthTest(self) -> list[TestResult]:
+    def userAuthTest(self):
         authURL = "/users/auth"
 
         # correct password test
         body = {
-            "username": "Hannah",
+            "email": "Hannah",
             "password": "Banana"
         }
         try:
-            response = requests.post(authURL, json=body)
-            print(response)
-            if response:
-                print('got response back:')
-                print(response)
-            else:
-                print('error!')
+            response = self.makePostReqWrapper(authURL, body)
             
-            tr = TestResult('User Authentication Test (Correct Password)', True, '')
-            testList.append(tr)
+            tr = TestResult('User Authentication Test (Correct Password)', True, response)
+            self.results.append(tr)
         except Exception as e:
             tr = TestResult('User Authentication Test (Corret Password)', False, str(e))
-            testList.append(tr)
+            self.results.append(tr)
 
 
     # tests that users can register accounts # 
-    def userRegistrationTest(self) -> TestResult:
-        registrationUrl = "/"
+    def userRegistrationTest(self):
+        registrationUrl = "/users/create"
         body = {
             "email": "BIT@test.com",
             "password": "Temp"
@@ -85,25 +85,28 @@ class BIT:
         try:
             response = self.makePostReqWrapper(registrationUrl, body)
             if response:
-                tr = TestResult('User Registration Test', True, '')
-                return tr
+                tr = TestResult('User Registration Test', True, response)
+                self.results.append(tr)
         except Exception as e:
             tr = TestResult('User Registration Test', False, str(e))
-            return tr
+            self.results.append(tr)
 
     # tests that users can register their league
     def leagueCreationTest(self) -> TestResult:
-        leagueCreationUrl = f"{self.URL}:{self.port}/createNewLeague"
+        leagueCreationUrl = "/league/createLeague"
         body = {
             "TODO": "Populate with data"
         }
         try:
-            response = requests.post(leagueCreationUrl, json=body)
-            tr = TestResult('League Creation Test', True, '')
-            return tr
+            response = self.makePostReqWrapper(leagueCreationUrl, body)
+            self.results.append(TestResult('League Creation Test', True, response))
         except Exception as e:
-            tr = TestResult('League Creation Test', False, str(e))
-            return tr
+            self.results.append(TestResult('League Creation Test', False, str(e)))
+    
+    # cleans up data in DB #
+    # TODO #
+    def tearDown(self, data:dict) -> bool:
+        return False
 
 def parseBitConfig(filename):
     with open(filename, 'r') as file:

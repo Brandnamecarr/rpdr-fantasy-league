@@ -12,6 +12,11 @@ Doc to track the routes
     /auth
         - Authenticates a user to the system
             PARAMS: username: string, password: string 
+    
+    /getUserRecord
+        - Loads all the user data from database (User Info, League, and Roster records)
+            PARAMS: email: string
+
 
 /league
     /getLeague 
