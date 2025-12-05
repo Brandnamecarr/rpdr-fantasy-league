@@ -1,4 +1,8 @@
 {
+    "Configs": {
+        "ip": "127.0.0.1",
+        "port": 3000
+    },
     "Leagues": {
         "Name": "RPDR Fantasy League",
         "Owner": "Brandon@test.com",

@@ -1,36 +1,58 @@
 import requests
 from TestResult import TestResult
-from threading import Thread
-import argparse
+import json
 import time
 import os
+import sys
 
 ''' class definition '''
 class BIT:
     # relatively constant #
-    URL: str = "http://127.0.0.1:3000"
-    port: int = 3000
+    HTTP: str = "http://"
+    IP: str = ""
+    PORT: int = 3000
+    TOKEN: str = "" # implement later with auth work #
+
+    # config data (TODO)
+    bitConfigData: dict = None
 
     # running list of results
     results = [TestResult]
 
-    def __init__(self, running, testing_thread_timer: int = 0, url: str = 'http://127.0.0.1', port: int = 3000):
-        if url:
-            self.URL = url
+    def __init__(self, ip: str = '127.0.0.1', port: int = 3000):
+        if ip:
+            self.IP = ip
         if port:
-            self.port = port
+            self.PORT = port
+    
+    # wrapper to make POST request #
+    # @route is what would follow the port on server #
+    # data can be any dict # 
+    def makePostReqWrapper(self, route: str, data: dict):
+        # to do
+        url = ''
+        header = {
+            'Content-Type': 'application/json',
+            'Authorization': f"{self.TOKEN}"
+        }
+        
+        try:
+            response = requests.post(url, headers=header, json=data)
+            return response
+        except Exception as e:
+            return str(e)
     
     def runTests(self):
 
         self.summarizeResults()
 
     def summarizeResults(self):
-        for testResult in results:
-            print(testResult.getResult())
+        # to do #
+        pass
 
     # tests that users can authenticate to the system
     def userAuthTest(self) -> list[TestResult]:
-        authURL = f"{self.URL}:{self.port}/users/auth"
+        authURL = "/users/auth"
 
         # correct password test
         body = {
@@ -53,17 +75,15 @@ class BIT:
             testList.append(tr)
 
 
-    # tests that users can register their team to a league
+    # tests that users can register accounts # 
     def userRegistrationTest(self) -> TestResult:
-        registrationUrl = f"{self.URL}:{self.port}/"
+        registrationUrl = "/"
         body = {
-            "league_name": "RPDR Fantasy League",
-            "email": "Hannah",
-            "team_name": "Hannah's Hotties",
-            "queens": ["Bianca Del Rio", "Plane Jane", "Jimbo", "Trinity the Tuck"]
+            "email": "BIT@test.com",
+            "password": "Temp"
         }
         try:
-            response = requests.post(registrationUrl, json=body)
+            response = self.makePostReqWrapper(registrationUrl, body)
             if response:
                 tr = TestResult('User Registration Test', True, '')
                 return tr
@@ -84,27 +104,22 @@ class BIT:
         except Exception as e:
             tr = TestResult('League Creation Test', False, str(e))
             return tr
-        
 
-def usage() -> str:
-    help: str = f"Here is some help with the BIT Framework:\n"
-    help += f""
+def parseBitConfig(filename):
+    with open(filename, 'r') as file:
+        return json.load(file)
 
 if __name__ == '__main__':
+    filename: str = 'test_data.json'
+    if not os.path.exists(filename):
+        sys.exit(-1)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--h', action="store_true")
-    parser.add_argument('--url', help="URL of Server to ping", default="http://127.0.0.1")
-    parser.add_argument('--port', help="Port the server is runnign on", default=3000, type=int)
-    
-    args = parser.parse_args()
-    bitInstance = None
+    bitConfigData = parseBitConfig(filename)
+    ip = bitConfigData['Configs']['ip']
+    port = bitConfigData['Configs']['port']
 
-    if args.h:
-        print(usage())
-    if args.url and args.port:
-        bitInstance = BIT(args.url, args.port)
-    else:
-        bitInstance = BIT() # just does the constructor for right now
+    # for now: just parse out the ip/port
+    # TODO: add test data arg to constructor
+    bitInstance = BIT(ip, port)
     
-    bitInstance.runTests()
+    # bitInstance.runTests()
