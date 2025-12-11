@@ -28,6 +28,7 @@ export enum WeeklyBonusPoints {
 export enum LeaguePointAwards {
     MOST_IMPROVED = 10,
     MISS_CONGENIALITY = 20,
+    TRADE_OF_THE_SEASON = 15,
     FAN_FAVORITE = 10
 } // LeaguePointAwards Enum//
 

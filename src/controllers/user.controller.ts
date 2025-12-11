@@ -9,6 +9,16 @@ export const getUsers = async (req: Request, res: Response) => {
     res.json(users);
 };
 
+export const getAllEmails = async (req: Request, res: Response) => {
+    const emails = await userService.getAllEmails();
+    if(emails) {
+        logger.info('User.Controller.ts: Got list of emails');
+        res.status(201).json(emails);
+    } else {
+        res.status(500).json({error: 'No emails in database'});
+    }
+};
+
 // could override the Request here with a custom CreateRequest to make the code cleaner. //
 export const createUser = async (req: Request, res: Response) => {
     const {email, password} = req.body;

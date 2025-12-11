@@ -30,3 +30,29 @@ export const createLeague = (leaguename: string, owner: string, users: Array<str
         },
     });
 };
+
+// gets all leagues where length(users) < maxPlayers //
+// AKA: what leagues can take on more players //
+export const getAvailableLeagues = async () => {
+    logger.info('League.Service.ts: about to get all leagues', {});
+
+    const allLeagues = await prisma.league.findMany({
+        select: {
+            id: true,
+            leagueName: true,
+            users: true,
+            maxPlayers: true,
+        },
+    });
+
+    console.log(`Got allLeagues: ${allLeagues}`);
+
+    const availableLeagues = allLeagues.filter(league => {
+        return league.users.length < league.maxPlayers;
+    });
+    console.log(
+        "available leagues below:"
+    );
+    console.log(availableLeagues);
+    return availableLeagues;
+};

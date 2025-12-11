@@ -10,6 +10,8 @@ import cors from 'cors';
 import userRoutes from './routes/user.routes';
 import leagueRoutes from './routes/league.routes';
 import leagueOpsRoutes from './routes/leagueOps.routes';
+import notifRoutes from './routes/notification.routes';
+import tokenRoutes from './routes/token.routes';
 
 // app stuff
 const app = express();
@@ -24,5 +26,7 @@ app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/league', leagueRoutes);
 app.use('/leagueOps', leagueOpsRoutes);
+app.use('/notifications', notifRoutes);
+app.use('/tokens', tokenRoutes);
 
 export default app;

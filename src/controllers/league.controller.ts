@@ -54,3 +54,16 @@ export const createLeague = async (req: Request, res: Response) => {
         res.status(500).json({error: 'Error creating league'});
     }
 };
+
+// fetches all leagues where length(users) < maxPlayers
+export const getAvailableLeagues = async (req: Request, res: Response) => {
+    logger.info('League.Controller.ts: getAvailableLeagues() ', {});
+    try {
+        const response = await leagueService.getAvailableLeagues();
+        logger.info('League.Controller.ts: got payload from database ', {payload: response});
+        res.status(201).json(response);
+    } catch(error) {
+        logger.error('League.Controller.ts: Error creating league: ', {error: error});
+        res.status(500).json({error: error});
+    }
+};

@@ -8,6 +8,15 @@ export const getUsers = () => {
     return prisma.user.findMany();  
 };
 
+export const getAllEmails = () => {
+    logger.info('User.Service.ts: fetching all usernames from db');
+    return prisma.user.findMany({
+        select: {
+            email: true,
+        },
+    });
+};
+
 export const createUser = (email: string, password: string) => {
     logger.info('User.Service.ts: creating user: ', {email: email});
     return prisma.user.create({

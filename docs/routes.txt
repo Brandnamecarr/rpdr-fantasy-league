@@ -30,6 +30,10 @@ Doc to track the routes
     /createLeague
         - Creates a league
         PARAMS: TBD
+    
+    /getAvailableLeagues
+        - Fetches all leagues where length(users) < maxPlayers
+        PARAMS: NONE
 
  
 
@@ -55,4 +59,8 @@ Doc to track the routes
     /weeklyPoll
         - Handles toots/boots and iconic/cringe moments
         PARAMS: (if each queen's runway was a toot/boot), which queens had iconic or cringe moment 
-/data
+
+Unclear if this will be used
+/tokens
+
+/notifications
