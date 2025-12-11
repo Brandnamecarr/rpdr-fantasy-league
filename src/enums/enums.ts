@@ -1,6 +1,6 @@
 
 // ways to add points
-enum PointManipulation {
+export enum PointManipulation {
     // positive changes
     MAXI_CHALLENGE_WIN = 15,
     SNATCH_GAME_WIN = 20,
@@ -20,18 +20,19 @@ enum PointManipulation {
 } // PointManipulation Enum // 
 
 // Ways to earn bonus points // 
-enum WeeklyBonusPoints {
+export enum WeeklyBonusPoints {
     LEAGUE_QUEEN_OF_WEEK = 10
 } // WeeklyBonusPoints Enum //
 
 // League Enum // 
-enum LeaguePointAwards {
+export enum LeaguePointAwards {
     MOST_IMPROVED = 10,
     MISS_CONGENIALITY = 20,
+    TRADE_OF_THE_SEASON = 15,
     FAN_FAVORITE = 10
 } // LeaguePointAwards Enum//
 
-enum QueenStatus {
+export enum QueenStatus {
     ACTIVE,
     ELIMINATED,
     WINNER

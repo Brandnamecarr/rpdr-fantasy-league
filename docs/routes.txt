@@ -7,11 +7,16 @@ Doc to track the routes
 
     /create
         - Creates a new user
-            PARAMS: username:string, email:string, password:string, teamName:string, queens: [string]
+            PARAMS: email:string, password:string
 
     /auth
         - Authenticates a user to the system
             PARAMS: username: string, password: string 
+    
+    /getUserRecord
+        - Loads all the user data from database (User Info, League, and Roster records)
+            PARAMS: email: string
+
 
 /league
     /getLeague 
@@ -25,16 +30,21 @@ Doc to track the routes
     /createLeague
         - Creates a league
         PARAMS: TBD
+    
+    /getAvailableLeagues
+        - Fetches all leagues where length(users) < maxPlayers
+        PARAMS: NONE
 
-    /addUser
+ 
+
+/leagueOps (REFINE THIS LATER)
+       /addUser
         - Adds a user to the list of competitors in the league 
         PARAMS: username:string, leaguename: string
 
     /removeUser
         - Removes a user from the list of competitors in the league
         PARAMS: username:string, leaguename: string
-
-/leagueOps
 
     /weeklyUpdate
         - Updates the standard data of the week (Winners, Losers, Tops, Bottoms, Safe, Lipsync Winner)
@@ -49,4 +59,8 @@ Doc to track the routes
     /weeklyPoll
         - Handles toots/boots and iconic/cringe moments
         PARAMS: (if each queen's runway was a toot/boot), which queens had iconic or cringe moment 
-/data
+
+Unclear if this will be used
+/tokens
+
+/notifications

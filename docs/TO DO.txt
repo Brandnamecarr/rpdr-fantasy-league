@@ -7,12 +7,12 @@ TESTING:
 - Rework testing framework
 - ping server endpoints with test data
 - can treat more like unit tests
-- start once all data types migrated to Prima.
+- start once all data types migrated to Prisma.
 
-BETA RELEASE FEATURE:
-- implemented in form of logger! 
+BETA RELEASE FEATURE: 
 - need to integrate it with more services 
 - test during execution
+- write python script to parse log file
 
 LEAGUEOPS:
     - Need to implement a mechanism to receive data over HTTP
@@ -22,3 +22,15 @@ LEAGUEOPS:
 HTTP REQUESTS:
 - implement some authentication (jwt, org ID, etc)
     * goes into the routes to block unwanted access 
+
+Ads & Payment:
+- stretch goal: get google ads embedded into the app
+- work on payment strategy and impl soon.
+
+Prisma:
+- work on cleanup function
+- or empty db with python
+
+NOTIFICATIONS:
+- added to prisma, need to Re-gen.
+- Work on get (email), getAll and update functionality

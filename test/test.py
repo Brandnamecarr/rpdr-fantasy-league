@@ -1,129 +1,128 @@
 import requests
 from TestResult import TestResult
-from threading import Thread
-import argparse
+import json
 import time
 import os
+import sys
 
 ''' class definition '''
 class BIT:
     # relatively constant #
-    URL: str = "http://127.0.0.1:3000"
-    port: int = 3000
+    HTTP: str = "http://"
+    IP: str = ""
+    PORT: int = 3000
+    TOKEN: str = "" # implement later with auth work #
+
+    # config data (TODO)
+    bitConfigData: dict = None
 
     # running list of results
     results = [TestResult]
 
-    def __init__(self, running, testing_thread_timer: int = 0, url: str = 'http://127.0.0.1', port: int = 3000):
-        if url:
-            self.URL = url
+    def __init__(self, ip: str = '127.0.0.1', port: int = 3000):
+        if ip:
+            self.IP = ip
         if port:
-            self.port = port
+            self.PORT = port
+    
+    # wrapper to make POST request #
+    # @route is what would follow the port on server #
+    # data can be any dict # 
+    def makePostReqWrapper(self, route: str, data: dict):
+        # to do
+        url = f"{self.HTTP}{self.IP}:{self.PORT}{self.route}"
+        print(f"connecting to server endpoint: {url}")
+        header = {
+            'Content-Type': 'application/json',
+            'Authorization': f"{self.TOKEN}"
+        }
+        
+        try:
+            response = requests.post(url, headers=header, json=data)
+            return response
+        except Exception as e:
+            return str(e)
     
     def runTests(self):
+        self.userAuthTest()
+        time.sleep(5)
+        self.userRegistrationTest()
+        time.sleep(5)
+        self.leagueCreationTest()
+        time.sleep(5)
+        self.summarizeResults()
+
+    def summarizeResults(self):
+        # to do #
         pass
 
-
     # tests that users can authenticate to the system
-    def userAuthTest(self) -> list[TestResult]:
-        testList = []
-        authURL = f"{self.URL}:{self.port}/users/auth"
+    def userAuthTest(self):
+        authURL = "/users/auth"
 
         # correct password test
         body = {
-            "username": "Hannah",
+            "email": "Hannah",
             "password": "Banana"
         }
         try:
-            response = requests.post(authURL, json=body)
-            print(response)
-            if response:
-                print('got response back:')
-                print(response)
-            else:
-                print('error!')
+            response = self.makePostReqWrapper(authURL, body)
             
-            tr = TestResult('User Authentication Test (Correct Password)', True, '')
-            testList.append(tr)
+            tr = TestResult('User Authentication Test (Correct Password)', True, response)
+            self.results.append(tr)
         except Exception as e:
             tr = TestResult('User Authentication Test (Corret Password)', False, str(e))
-            testList.append(tr)
-        
-        # incorrect password test
-        body = {
-                "username": "Brandon",
-                "password": "IncorrectPW"
-            }
-        try:
-            response = requests.post(authURL, json=body)
-            if response:
-                print('got response back:')
-                print(response)
-            else:
-                print('error!')
-            
-            tr = TestResult('User Authentication Test (Inorrect Password)', True, '')
-            testList.append(tr)
-        except Exception as e:
-            tr = TestResult('User Authentication Test (Inorret Password)', False, str(e))
-            testList.append(tr)
-        
-        return testList
+            self.results.append(tr)
 
 
-    # tests that users can register their team to a league
-    def userRegistrationTest(self) -> TestResult:
-        registrationUrl = f"{self.URL}:{self.port}/"
+    # tests that users can register accounts # 
+    def userRegistrationTest(self):
+        registrationUrl = "/users/create"
         body = {
-            "league_name": "RPDR Fantasy League",
-            "username": "Hannah",
-            "password": "Banana",
-            "team_name": "Hannah's Hotties",
-            "queens": ["Bianca Del Rio", "Plane Jane", "Jimbo", "Trinity the Tuck"]
+            "email": "BIT@test.com",
+            "password": "Temp"
         }
         try:
-            response = requests.post(registrationUrl, json=body)
+            response = self.makePostReqWrapper(registrationUrl, body)
             if response:
-                tr = TestResult('User Registration Test', True, '')
-                return tr
+                tr = TestResult('User Registration Test', True, response)
+                self.results.append(tr)
         except Exception as e:
             tr = TestResult('User Registration Test', False, str(e))
-            return tr
+            self.results.append(tr)
 
     # tests that users can register their league
     def leagueCreationTest(self) -> TestResult:
-        leagueCreationUrl = f"{self.URL}:{self.port}/createNewLeague"
+        leagueCreationUrl = "/league/createLeague"
         body = {
             "TODO": "Populate with data"
         }
         try:
-            response = requests.post(leagueCreationUrl, json=body)
-            tr = TestResult('League Creation Test', True, '')
-            return tr
+            response = self.makePostReqWrapper(leagueCreationUrl, body)
+            self.results.append(TestResult('League Creation Test', True, response))
         except Exception as e:
-            tr = TestResult('League Creation Test', False, str(e))
-            return tr
-        
+            self.results.append(TestResult('League Creation Test', False, str(e)))
+    
+    # cleans up data in DB #
+    # TODO #
+    def tearDown(self, data:dict) -> bool:
+        return False
 
-def usage() -> str:
-    help: str = f"Here is some help with the BIT Framework:\n"
-    help += f""
+def parseBitConfig(filename):
+    with open(filename, 'r') as file:
+        return json.load(file)
 
 if __name__ == '__main__':
+    filename: str = 'test_data.json'
+    if not os.path.exists(filename):
+        sys.exit(-1)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--h', action="store_true")
-    parser.add_argument('--url', help="URL of Server to ping", default="http://127.0.0.1")
-    parser.add_argument('--port', help="Port the server is runnign on", default=3000, type=int)
-    
-    args = parser.parse_args()
-    bitInstance = None
+    bitConfigData = parseBitConfig(filename)
+    ip = bitConfigData['Configs']['ip']
+    port = bitConfigData['Configs']['port']
 
-    if args.h:
-        print(usage())
-    if args.interval and args.url and args.port:
-        bitInstance = BIT(args.url, args.port)
-    else:
-        bitInstance = BIT() # just does the constructor for right now
+    # for now: just parse out the ip/port
+    # TODO: add test data arg to constructor
+    bitInstance = BIT(ip, port)
     
-    bitInstance.runTests()
+    # bitInstance.runTests()

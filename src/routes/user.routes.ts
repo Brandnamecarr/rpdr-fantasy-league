@@ -6,6 +6,7 @@ const router = Router();
 router.get("/getAll", userController.getUsers);
 router.post("/create", userController.createUser);
 router.post("/auth", userController.authenticateUser);
-router.post("/updateLeague", userController.updateLeague);
+router.get('/getUserRecord', userController.getUserRecord);
+router.get('/getAllEmails', userController.getAllEmails);
 
 export default router;

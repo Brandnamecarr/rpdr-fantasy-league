@@ -12,7 +12,7 @@ export class ConsoleLogger implements CustomLogger {
         this.serviceName = serviceName;
         this.logFilePath = path.join(process.cwd(), logFileName);
         this.ensureLogDirectory();
-        console.log('[LOGGER INIT] Service: ${serviceName} | Level: ${LogLevel[this.currentLevel]}');
+        console.log(`[LOGGER INIT] Service: ${serviceName} | Level: ${LogLevel[this.currentLevel]}`);
     }
 
     private ensureLogDirectory(): void {
