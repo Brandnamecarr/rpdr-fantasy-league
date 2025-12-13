@@ -6,5 +6,6 @@ const router = Router();
 router.post('/addUserToLeague', leagueOpsController.addUserToLeague);
 router.post("/weeklyUpdate", leagueOpsController.weeklyUpdate);
 router.post("/weeklySurvey", leagueOpsController.weeklySurvey);
+router.post("/getAllLeagueRosters", leagueOpsController.getAllRostersByLeague);
 
 export default router;

@@ -71,3 +71,25 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
         res.status(404).json({error: 'Unable to remove user from league'});
     }
 };
+
+// gets all rosters by league //
+export const getAllRostersByLeague = async (req: Request, res: Response) => {
+    const {email, token, leagueName} = req.body;
+    logger.info('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName: leagueName});
+    try {
+        const result = await leagueOpsService.getAllRostersByLeague(leagueName);
+        logger.info('LeagueOps.Controller.ts: Got back result: ', {result: result});
+        if(!result) {
+            logger.info(`LeagueOps.Controller.ts: No rosters found for league ${leagueName}`, {});
+            res.status(404).json({"Error": `"No rosters found for league ${leagueName}"`});
+        } // if //
+        logger.info('LeagueOps.Controller.ts: Returning 201');
+        res.status(201).json(result);
+    } // try // 
+    catch(error) {
+        logger.error('LeagueOps.Controller.ts: error in getAllRostersByLeague: ', {error: error});
+        res.status(500).json({
+            "Error": {error}
+        });
+    } // catch //
+};

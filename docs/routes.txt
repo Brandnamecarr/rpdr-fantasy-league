@@ -59,6 +59,10 @@ Doc to track the routes
     /weeklyPoll
         - Handles toots/boots and iconic/cringe moments
         PARAMS: (if each queen's runway was a toot/boot), which queens had iconic or cringe moment 
+    
+    /getAllLeagueRosters
+        - Returns all Rosters when leagueName = leagueName
+        PARAMS: leagueName: string
 
 Unclear if this will be used
 /tokens

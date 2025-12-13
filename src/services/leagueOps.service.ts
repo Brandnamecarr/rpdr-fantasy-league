@@ -102,3 +102,12 @@ export const removeUserFromLeague = async (email: string, league: League) => {
         // TODO. 
     }
 };
+
+// finds all rosters with the leagueName //
+export const getAllRostersByLeague = (leagueName: string) => {
+    return prisma.roster.findMany({
+        where: {
+            leagueName: leagueName,
+        },
+    });
+};
