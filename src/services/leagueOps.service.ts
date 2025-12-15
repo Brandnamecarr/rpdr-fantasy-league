@@ -111,3 +111,7 @@ export const getAllRostersByLeague = (leagueName: string) => {
         },
     });
 };
+
+export const getAllRosters = () => {
+    return prisma.roster.findMany();
+};

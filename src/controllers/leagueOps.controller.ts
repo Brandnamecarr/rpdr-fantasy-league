@@ -96,6 +96,20 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
     } // catch //
 };
 
+export const getAllRosters = async (req: Request, res: Response) => {
+    const {token} = req.body;
+    try {
+        let response = await leagueOpsService.getAllRosters();
+        if(!response) {
+            res.status(404).json({"Error": "No rosters found in database"});
+        }
+        res.status(201).json(response);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: Error in getAllRosters: ', {error: error});
+        res.status(500).json({error: error});
+    }
+};
+
 // adds a roster to the db //
 export const addRoster = async (req: Request, res: Response) => {
     const {leagueName, email, teamName, queens} = req.body;
