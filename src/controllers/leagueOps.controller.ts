@@ -74,6 +74,8 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
 
 // gets all rosters by league //
 export const getAllRostersByLeague = async (req: Request, res: Response) => {
+    //i think token gets used in the routes file //
+    // might not need to pass in //
     const {email, token, leagueName} = req.body;
     logger.info('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName: leagueName});
     try {
@@ -92,4 +94,15 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
             "Error": {error}
         });
     } // catch //
+};
+
+// adds a roster to the db //
+export const addRoster = async (req: Request, res: Response) => {
+    const {leagueName, email, teamName, queens} = req.body;
+    try {
+        let result = await leagueOpsService.addNewRoster(leagueName, email, teamName, queens);
+    } catch(error) {
+        logger.error('leagueOps.Controller.ts: addRoster error: ', {error: error});
+        res.status(500).json({"Error": error});
+    }
 };
