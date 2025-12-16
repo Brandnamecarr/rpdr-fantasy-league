@@ -103,6 +103,10 @@ export const removeUserFromLeague = async (email: string, league: League) => {
     }
 };
 
+export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[]) => {
+    console.log('TODO: addNewRoster');
+};
+
 // finds all rosters with the leagueName //
 export const getAllRostersByLeague = (leagueName: string) => {
     return prisma.roster.findMany({
