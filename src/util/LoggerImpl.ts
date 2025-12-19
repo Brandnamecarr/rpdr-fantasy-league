@@ -71,6 +71,10 @@ export class ConsoleLogger implements CustomLogger {
     public info(message: string, context?: object): void {
         this.log(LogLevel.INFO, message, context);
     }
+
+    public debug(message: string, context?: object): void {
+        this.log(LogLevel.DEBUG, message, context);
+    }
 }
 
 const logger: CustomLogger = new ConsoleLogger(
