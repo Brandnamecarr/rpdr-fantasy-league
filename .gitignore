@@ -6,6 +6,7 @@ __pycache__/*
 
 test/__pycache__
 test/__pycache__/*
+test/BIT.log
 
 logs/*
 logs/app.log

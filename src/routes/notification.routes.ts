@@ -3,7 +3,9 @@ import * as notifController from '../controllers/notification.controller';
 
 const router = Router();
 
-router.get('/get', notifController.getUserNotifs);
-router.get('/getAllActive', notifController.getAllActiveNotifs);
+router.post('/get', notifController.getUserNotifs);
+router.post('/getAllActive', notifController.getAllActiveNotifs);
+router.post('/newNotification', notifController.makeNewNotification);
+router.post('/updateNotification', notifController.updateNotifStatus);
 
 export default router;

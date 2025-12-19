@@ -8,6 +8,10 @@ export const getLeague = async (req: Request, res: Response) => {
     logger.info('League.Controller.ts: getLeague() with param: ', {leagueName: leaguename});
     try {
         const leagueRecord = await leagueService.getLeague(leaguename);
+        if(!leagueRecord) {
+            logger.info('League.Controller.ts: did not get any records back');
+            return res.status(404).json({"Error":`Did not find any leagues with name ${leaguename}`});
+        }
         logger.info('League.Controller.ts: successfully loaded record from database', {});
         res.json(leagueRecord);
     } // try //
@@ -24,6 +28,9 @@ export const getLeague = async (req: Request, res: Response) => {
 export const getAllLeagues = async (req: Request, res: Response) => {
     try {
         const leagues = await leagueService.getAllLeagues();
+        if(!leagues) {
+            return res.status(404).json({"Error": `Didn't find any leagues in database`});
+        }
         logger.info('League.Controller.ts: returning all leagues in getAllLeagues()', {});
         res.status(201).json(leagues);
     } // try //
@@ -36,12 +43,14 @@ export const getAllLeagues = async (req: Request, res: Response) => {
 
 // create new league //
 export const createLeague = async (req: Request, res: Response) => {
-    // TODO: replace datapoints with league data points
+    // TODO: Add maxQueensPerLeague: int //
     const {leagueName, owner, users, maxPlayers} = req.body;
-    console.log(leagueName);
-    console.log(owner);
-    console.log(users);
-    console.log(maxPlayers);
+
+    // guard rail to make sure owner ends up in the user array //
+    if(!users.includes(owner)) {
+        users.push(owner);
+    }
+
     logger.info('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers});
     try {
         const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers);

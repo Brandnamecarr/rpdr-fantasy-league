@@ -3,7 +3,7 @@ import * as leagueController from "../controllers/league.controller";
 
 const router = Router();
 
-router.get("/getLeague", leagueController.getLeague);
+router.post("/getLeague", leagueController.getLeague);
 router.get("/getAllLeagues", leagueController.getAllLeagues);
 router.get("/getAvailableLeagues", leagueController.getAvailableLeagues);
 router.post("/createLeague", leagueController.createLeague);
