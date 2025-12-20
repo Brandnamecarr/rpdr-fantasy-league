@@ -36,13 +36,13 @@ export const weeklySurvey = (toots: Array<string>,
 };
 
 export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>) => {
-    logger.info('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
+    logger.debug('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
     // 1. Check to see if user is already registered for this league.
     const isAlreadyInLeague: boolean = league.users.includes(email);
 
     if(!isAlreadyInLeague) {
-        logger.info('leagueOps.Service.ts: User is not already in the league',{});
+        logger.debug('leagueOps.Service.ts: User is not already in the league',{});
         // 2. check size of users array, make sure that adding this user won't go over maximum
         if ((league.users.length + 1) <= league.maxPlayers) {
             let updatedPayload = {
@@ -51,7 +51,7 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
                 },
             };
             // 3. Update the record for the League table
-            logger.info('leagueOps.Service.ts: adding user to the league', {});
+            logger.debug('leagueOps.Service.ts: adding user to the league', {});
             await prisma.league.update({
                 where: {
                     leagueName: league.leagueName,

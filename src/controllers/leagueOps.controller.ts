@@ -26,7 +26,7 @@ export const weeklySurvey = async (req: Request, res: Response) => {
         const resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
         res.status(201).json(resp);
     } catch (error) {
-        logger.info('leagueOps.Controller.ts: Error with Weekly Survey', {error: error});
+        logger.debug('leagueOps.Controller.ts: Error with Weekly Survey', {error: error});
         res.status(500).json({error: error});
     }
 };
@@ -77,15 +77,15 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
     //i think token gets used in the routes file //
     // might not need to pass in //
     const {email, token, leagueName} = req.body;
-    logger.info('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName: leagueName});
+    logger.debug('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName: leagueName});
     try {
         const result = await leagueOpsService.getAllRostersByLeague(leagueName);
-        logger.info('LeagueOps.Controller.ts: Got back result: ', {result: result});
+        logger.debug('LeagueOps.Controller.ts: Got back result: ', {result: result});
         if(!result) {
-            logger.info(`LeagueOps.Controller.ts: No rosters found for league ${leagueName}`, {});
+            logger.debug(`LeagueOps.Controller.ts: No rosters found for league ${leagueName}`, {});
             res.status(404).json({"Error": `"No rosters found for league ${leagueName}"`});
         } // if //
-        logger.info('LeagueOps.Controller.ts: Returning 201');
+        logger.debug('LeagueOps.Controller.ts: Returning 201');
         res.status(201).json(result);
     } // try // 
     catch(error) {

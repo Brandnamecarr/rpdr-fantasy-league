@@ -8,7 +8,7 @@ export const getAllByUser = async (email: string) => {
             destination: email,
         },
     });
-    logger.info('Notification.Service.ts: Got these notifs from DB: ', {notifs: notifs});
+    logger.debug('Notification.Service.ts: Got these notifs from DB: ', {notifs: notifs});
     console.log(notifs);
     return notifs;
 };
@@ -24,7 +24,7 @@ export const getAllActiveNotifs = async (email: string) => {
 };
 
 export const makeNewNotification = async (source: string, dest: string, content: string) => {
-    logger.info('Notification.Service.ts: makeNewNotification with: ', {source: source, dest: dest, content: content});
+    logger.debug('Notification.Service.ts: makeNewNotification with: ', {source: source, dest: dest, content: content});
     try {
         const newNotif = await prisma.notification.create({
         data: {
@@ -33,7 +33,7 @@ export const makeNewNotification = async (source: string, dest: string, content:
             content: content,
         },
     });
-        logger.info('Notification.Service.ts: New Notification Created: ', newNotif);
+        logger.debug('Notification.Service.ts: New Notification Created: ', newNotif);
         return newNotif;
     } catch(error) {
         logger.error('Notification.Service.ts: makeNewNotification Error: ', {error: error});
@@ -42,7 +42,7 @@ export const makeNewNotification = async (source: string, dest: string, content:
 };
 
 export const updateNotifStatus = async (notifId: number) => {
-    logger.info('Notification.Service.ts: updateNotifStatus with notifId: ', {notifId: notifId});
+    logger.debug('Notification.Service.ts: updateNotifStatus with notifId: ', {notifId: notifId});
     try {
         let updatedPayload = {
             resolved: true,
@@ -53,7 +53,7 @@ export const updateNotifStatus = async (notifId: number) => {
                 },
                 data: updatedPayload,
             });
-            logger.info('Notification.Service.ts: returning response: ', {response: response.notifId});
+            logger.debug('Notification.Service.ts: returning response: ', {response: response.notifId});
         return response;
     } catch(error) {
         logger.error('Notification.Service.ts: Error in updateNotifStatus: ', {error: error});

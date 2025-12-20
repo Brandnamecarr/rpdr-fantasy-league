@@ -5,6 +5,7 @@ const router = Router();
 
 router.get("/getAll", userController.getUsers);
 router.post("/create", userController.createUser);
+router.post("/updatePassword", userController.updatePassword);
 router.post("/auth", userController.authenticateUser);
 router.get('/getUserRecord', userController.getUserRecord);
 router.get('/getAllEmails', userController.getAllEmails);

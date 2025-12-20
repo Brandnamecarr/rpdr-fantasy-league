@@ -4,12 +4,12 @@ import {League, User, Roster} from '@prisma/client';
 
 // returns users // 
 export const getUsers = () => {
-    logger.info('User.Service.ts: fetching all users from database');
+    logger.debug('User.Service.ts: fetching all users from database');
     return prisma.user.findMany();  
 };
 
 export const getAllEmails = () => {
-    logger.info('User.Service.ts: fetching all usernames from db');
+    logger.debug('User.Service.ts: fetching all usernames from db');
     return prisma.user.findMany({
         select: {
             email: true,
@@ -18,7 +18,7 @@ export const getAllEmails = () => {
 };
 
 export const createUser = (email: string, password: string) => {
-    logger.info('User.Service.ts: creating user: ', {email: email});
+    logger.debug('User.Service.ts: creating user: ', {email: email});
     return prisma.user.create({
         data: { 
             email: email, 
@@ -29,7 +29,7 @@ export const createUser = (email: string, password: string) => {
 
 // gets the user record by name.
 export const getUserByName = async (email: string) => {
-    logger.info('User.Service.ts: finding user in database: ', {email: email});
+    logger.debug('User.Service.ts: finding user in database: ', {email: email});
     return prisma.user.findUnique({
         where: {
             email: email,
@@ -39,7 +39,7 @@ export const getUserByName = async (email: string) => {
 
 // loads user entire record //
 export const getUserRecord = async (email: string) => {
-    logger.info('User.Service.ts: finding all user records in database: ', {email: email});
+    logger.debug('User.Service.ts: finding all user records in database: ', {email: email});
     let userRecord = await getUserByName(email);
 
     if(!userRecord) {
@@ -101,4 +101,16 @@ export const getUserRecord = async (email: string) => {
     };
 
     return collectedData;
+};
+
+export const updatePassword = async (email: string, newHashedPassword: string) => {
+    logger.debug("User.Service.ts: Updating password with payload: ", {email: email});
+    return await prisma.user.update({
+        where: {
+            email: email,
+        },
+        data: {
+            password:newHashedPassword,
+        },
+    });
 };
