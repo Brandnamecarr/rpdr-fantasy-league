@@ -97,7 +97,6 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
 };
 
 export const getAllRosters = async (req: Request, res: Response) => {
-    const {token} = req.body;
     try {
         let response = await leagueOpsService.getAllRosters();
         if(!response) {
