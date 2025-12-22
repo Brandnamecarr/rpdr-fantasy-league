@@ -1,0 +1,28 @@
+[
+    {
+        "Franchise": "USA",
+        "Season": 18,
+        "Episode Number": 1,
+        "maxiWinner": "", 
+        "isSnatchGame": "", 
+        "miniWinner": "", 
+        "topQueens": [], 
+        "safeQueens": [], 
+        "bottomQueens": [], 
+        "linSyncWinner": "", 
+        "eliminated": ""
+    },
+    {
+        "Franchise": "USA",
+        "Season": 18,
+        "Episode Number": 2,
+        "maxiWinner": "TEST", 
+        "isSnatchGame": "", 
+        "miniWinner": "", 
+        "topQueens": [], 
+        "safeQueens": [], 
+        "bottomQueens": [], 
+        "linSyncWinner": "", 
+        "eliminated": ""
+    }
+]

@@ -39,6 +39,7 @@ export const getAvailableLeagues = async () => {
     const allLeagues = await prisma.league.findMany({
         select: {
             id: true,
+            owner: true,
             leagueName: true,
             users: true,
             maxPlayers: true,

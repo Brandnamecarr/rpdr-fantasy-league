@@ -1,0 +1,18 @@
+import React from 'react';
+
+const ${COMPONENT_NAME} = () => {
+    const data = ${JSON_DATA}; // The Python script will inject a list/dict here
+
+    return (
+        <div className="container">
+            <h1>${TITLE}</h1>
+            <ul>
+                {data.map((item, index) => (
+                    <li key={index}>{item.${KEY_NAME}}</li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
+export default ${COMPONENT_NAME};
