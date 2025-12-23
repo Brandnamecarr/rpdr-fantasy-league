@@ -11,10 +11,15 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
 
     try {
         const resp = await leagueOpsService.weeklyUpdate(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
-        res.status(201).json(resp);
+        if(!resp) {
+            logger.error('LeagueOps.Controller.ts: Error in weeklyUpdate(), unable to update points');
+            return res.status(404).json({Error: 'Error performing weeklyUpdate operations'});
+        }
+        logger.info('LeagueOps.Controller.ts: successfully updated point totals, returning 201');
+        return res.status(201).json(resp);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({error: 'Error processing weekly update'});
+        logger.error('LeagueOps.Controller.ts: error in weeklyUpdate(): ', {error:error});
+        return res.status(500).json({error: 'Error processing weekly update'});
     }
 };
 
@@ -23,11 +28,16 @@ export const weeklySurvey = async (req: Request, res: Response) => {
     const {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek} = req.body;
 
     try {
-        const resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
-        res.status(201).json(resp);
+        let resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
+        if(!resp) {
+            logger.error('LeagueOps.Controller.ts: got back null from weeklySurvey, returning 404');
+            return res.status(404).json({Error: "Error with weeklySurvey"});
+        }
+        logger.info('LeagueOps.Controller.ts: successfully performed weeklySurvey update, returning 201');
+        return res.status(201).json(resp);
     } catch (error) {
         logger.debug('leagueOps.Controller.ts: Error with Weekly Survey', {error: error});
-        res.status(500).json({error: error});
+        return res.status(500).json({error: error});
     }
 };
 
