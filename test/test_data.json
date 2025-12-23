@@ -2,17 +2,5 @@
     "Configs": {
         "ip": "127.0.0.1",
         "port": 3000
-    },
-    "Leagues": {
-        "Name": "RPDR Fantasy League",
-        "Owner": "Brandon@test.com",
-        "MaxUsers": 10,
-        "Users": []
-    },
-    "Users": {
-        "Brandon@test.com": {
-            "Team_Name": "Brandon's Baddies",
-            "Queens": ["Bianca Del Rio", "Shea Coulee"]
-        }
     }
 }
