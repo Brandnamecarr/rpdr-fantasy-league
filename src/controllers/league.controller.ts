@@ -61,7 +61,6 @@ export const getLeaguesByUser = async (req: Request, res: Response) => {
 
 // create new league //
 export const createLeague = async (req: Request, res: Response) => {
-    // TODO: Add maxQueensPerLeague: int //
     const {leagueName, owner, users, maxPlayers, maxQueensPerTeam} = req.body;
 
     // guard rail to make sure owner ends up in the user array //
