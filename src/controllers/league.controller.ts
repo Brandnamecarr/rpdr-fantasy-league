@@ -29,36 +29,53 @@ export const getAllLeagues = async (req: Request, res: Response) => {
     try {
         const leagues = await leagueService.getAllLeagues();
         if(!leagues) {
-            return res.status(404).json({"Error": `Didn't find any leagues in database`});
+            return res.status(404).json({error: `Didn't find any leagues in database`});
         }
         logger.debug('League.Controller.ts: returning all leagues in getAllLeagues()', {});
         res.status(201).json(leagues);
     } // try //
     catch (error) {
-        console.log(error);
         logger.error('League.Controller.ts: Error fetching all leagues: ', {error: error});
         res.status(500).json({error: 'Error getting all leagues'});
+    }
+};
+
+// gets all the leagues a user is a part of //
+export const getLeaguesByUser = async (req: Request, res: Response) => {
+    const email = req?.query?.email as string || undefined;
+    if(!email) {
+        logger.error("League.Controller.ts: email not in getLeaguesByUser query");
+        return res.status(404).json({Error: "Email required in query params."});
+    }
+    try {
+        let response = await leagueService.getLeaguesByUser(email);
+        if(!response) {
+            return res.status(404).json({Error: `No Leagues found for ${email}`})
+        }
+        return res.status(201).json(response);
+    } catch(error) {
+        logger.error('League.Controller.ts: error in getLeaguesByUser(): ', {error: error});
+        res.status(500).json({Error: `Error completing getLeaguesByUser for ${email}`});
     }
 };
 
 // create new league //
 export const createLeague = async (req: Request, res: Response) => {
     // TODO: Add maxQueensPerLeague: int //
-    const {leagueName, owner, users, maxPlayers} = req.body;
+    const {leagueName, owner, users, maxPlayers, maxQueensPerTeam} = req.body;
 
     // guard rail to make sure owner ends up in the user array //
     if(!users.includes(owner)) {
         users.push(owner);
     }
 
-    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers});
+    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
     try {
-        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers);
+        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam);
         logger.debug('League.Controller.ts: creating league with status 201');
         logger.debug('Created league: ', {league: league});
         res.status(201).json(league);
     } catch (error) {
-        console.error(error);
         logger.error('League.Controller.ts: Error creating league: ', {error: error});
         res.status(500).json({error: 'Error creating league'});
     }

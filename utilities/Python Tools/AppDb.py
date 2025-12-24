@@ -23,4 +23,4 @@ class AppDb:
         return self.adapter.selectAllFromTable(table)
 
 appDb = AppDb()
-print(appDb.getAllFromTable("Roster"))
+print(appDb.getAllFromTable("User"))

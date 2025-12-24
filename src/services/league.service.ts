@@ -18,15 +18,30 @@ export const getAllLeagues = () => {
 };
 
 // creates a league in the database // 
-export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number) => {
+export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number) => {
     // TODO: make sure league name is unique //
-    logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers});
+    logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
     return prisma.league.create({
         data: {
             leagueName: leaguename,
             owner: owner,
             users: users,
-            maxPlayers: maxPlayers
+            maxPlayers: maxPlayers,
+            maxQueensPerTeam: maxQueensPerTeam,
+        },
+    });
+};
+
+export const getLeaguesByUser = (email: string) => {
+    return prisma.league.findMany({
+        where: {
+            users: {
+                has: email,
+            },
+        },
+        select: {
+            id: true,
+            leagueName: true,
         },
     });
 };

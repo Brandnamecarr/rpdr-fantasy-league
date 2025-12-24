@@ -27,8 +27,12 @@ export const createUser = async (req: Request, res: Response) => {
     // handle the hashing of the password here //
     try {
         const hashedPassword = await passwordManager.hashPassword(password);
+        if(hashedPassword === '') {
+            logger.error('User.Controller.ts: error hashing password');
+            return res.json(500).json({Error: "Unable to hash password, not ceating user"});
+        }
         const user = await userService.createUser(email, hashedPassword);
-        logger.debug('User.Controller.ts: returning status=201');
+        logger.debug('User.Controller.ts: returning status=201, ', {userData: user});
         res.status(201).json({email:email});
     } catch(error) {
         logger.error('User.Controller.ts: error creating user, returning 500, error: ', {error:error});

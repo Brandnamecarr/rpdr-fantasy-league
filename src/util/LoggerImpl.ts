@@ -7,7 +7,7 @@ export class ConsoleLogger implements CustomLogger {
     private serviceName: string;
     private logFilePath: string;
 
-    constructor(serviceName: string, currentLevel: LogLevel = LogLevel.ERROR, logFileName: string='logs/app.log') {
+    constructor(serviceName: string, currentLevel: LogLevel = LogLevel.DEBUG, logFileName: string='logs/app.log') {
         this.currentLevel = currentLevel;
         this.serviceName = serviceName;
         this.logFilePath = path.join(process.cwd(), logFileName);

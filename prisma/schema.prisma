@@ -20,6 +20,7 @@ model League {
   owner String
   users String[]
   maxPlayers Int
+  maxQueensPerTeam Int @default(3)
   createdAt DateTime @default(now())
 }
 
