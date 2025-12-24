@@ -35,5 +35,8 @@ export enum LeaguePointAwards {
 export enum QueenStatus {
     ACTIVE,
     ELIMINATED,
-    WINNER
+    WINNER,
+    MISS_CONGENIALITY,
+    UNKNOWN_OR_ERROR,
+    RUNNERUP
 } //QueenStatus Enum//

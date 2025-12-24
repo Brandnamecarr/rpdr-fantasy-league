@@ -4,7 +4,7 @@ import {League, User, Roster} from '@prisma/client';
 
 // returns users // 
 export const getUsers = () => {
-    logger.debug('User.Service.ts: fetching all users from database');
+    //logger.debug('User.Service.ts: fetching all users from database');
     return prisma.user.findMany();  
 };
 

@@ -44,11 +44,20 @@ model Notification {
   updatedAt DateTime @updatedAt
 }
 
+enum QueenStatus {
+  WINNER
+  ACTIVE
+  ELIMINATED
+  RUNNER_UP
+  UNKNOWN_OR_ERROR
+  MS_CONGENIALITY
+}
+
 model Queen {
   queenId Int @id @default(autoincrement())
   franchise String
   season Int
   name String
-  status String
+  status QueenStatus @default(ACTIVE)
   location String
 }

@@ -5,7 +5,8 @@ const router = Router();
 
 router.get("/getAll", queenController.getAllQueens);
 router.get("/getQueenByName", queenController.getQueenByName);
-router.get("/getQueensByFranchiseAndEpisode", queenController.getQueensByFranchiseAndEpisode);
+router.get("/getQueensByFranSeas", queenController.getByFranchiseAndSeason);
+router.get("/getQueenStatus", queenController.getQueenStatus);
 
 router.post("/addNewQueen", queenController.addNewQueen);
 router.post("/addNewQueens", queenController.addNewQueens);
