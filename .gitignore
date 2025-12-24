@@ -1,5 +1,7 @@
 node_modules
 node_modules/*
+prisma/migrations
+prisma/migrations/*
 
 __pycache__/
 __pycache__/*
