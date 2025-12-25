@@ -66,8 +66,8 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
                 // Calculate how many points this specific user earned this week
                 // based on the queens currently in their roster array
                 const pointsEarnedThisWeek = roster.queens.reduce((total, queenName) => {
-                const score = weeklyQueenScores[queenName] || 0;
-                return total + score;
+                    const score = weeklyQueenScores[queenName] || 0;
+                    return total + score;
                 }, 0);
         
                 // Return the update operation (don't 'await' it yet)
@@ -75,7 +75,10 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
                 where: { recordId: roster.recordId },
                 data: {
                     currentPoints: {
-                    increment: pointsEarnedThisWeek,
+                        increment: pointsEarnedThisWeek,
+                    },
+                    pointUpdates: {
+                        push: pointsEarnedThisWeek,
                     },
                 },
                 });
@@ -151,20 +154,29 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
             // Calculate how many points this specific user earned this week
             // based on the queens currently in their roster array
             const pointsEarnedThisWeek = roster.queens.reduce((total, queenName) => {
-            const score = weeklySurveyUpdate[queenName] || 0;
-            return total + score;
+                const score = weeklySurveyUpdate[queenName] || 0;
+                return total + score;
             }, 0);
+
+            const pointUpdateArray = [...roster.pointUpdates];
+            if(pointUpdateArray.length > 0) {
+                pointUpdateArray[pointUpdateArray.length-1] += pointsEarnedThisWeek;
+            } else {
+                pointUpdateArray.push(pointsEarnedThisWeek);
+            }
     
-            // Return the update operation (don't 'await' it yet)
             return prisma.roster.update({
-            where: { recordId: roster.recordId },
-            data: {
-                currentPoints: {
-                increment: pointsEarnedThisWeek,
-                },
-            },
-            });
-        }); // updatePromises //
+                where: { recordId: roster.recordId },
+                    data: {
+                        currentPoints: {
+                            increment: pointsEarnedThisWeek,
+                        },
+                        pointUpdates: {
+                            set: pointUpdateArray,
+                        },
+                    },
+                });
+            }); // updatePromises //
     
         // 3. Execute all updates as a single transaction
         // This is much faster and safer than updating one-by-one in a loop
