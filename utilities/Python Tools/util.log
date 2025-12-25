@@ -1,4 +1,3 @@
-QueenOps.readWeeklyFileUpdate() -> reading C:\Users\Brandon Carr\Desktop\current_projects\rpdr-fantasy-league\utilities\misc/data/episode_data.json
-QueenOps.readWeeklyFileUpdate() -> successfully read data and initialized weeklyUpdateData
-QueenOps.sendWeeklyUpdateData() -> all keys present, sending update
-main.py.sendWeeklyUpdate() -> sent weekly update
+TemplateGenerator.makeWeeklySurveyDir() -> making path queens/USA All Stars/Season 11/1
+TemplateGenerator.makeWeeklySurveyDir() -> made path!
+main.py.makeWeeklySurveyDir() -> successfully made directory

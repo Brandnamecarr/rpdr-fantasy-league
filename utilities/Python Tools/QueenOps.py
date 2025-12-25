@@ -19,6 +19,41 @@ class QueenOps:
 
     def __init__(self):
         self.queenOpsLogger = utilLogger()
+    
+    def addBlankRecord(self, filename: str, franchise: str, season: int, episode: int) -> bool:
+        data = None
+        # read the config file #
+        with open(filename, 'r') as weeklyUpdateDataFile:
+            data = json.load(weeklyUpdateDataFile)
+
+            if not data or len(data) <= 0:
+                return False
+        
+        # make the new, blank record #
+        newRecord = {
+            "Franchise": franchise,
+            "Season": season,
+            "Episode Number": episode,
+            "maxiWinner": "", 
+            "isSnatchGame": "", 
+            "miniWinner": "", 
+            "topQueens": [], 
+            "safeQueens": [], 
+            "bottomQueens": [], 
+            "linSyncWinner": "", 
+            "eliminated": ""
+        }
+
+        # add the new record to the data
+        data.append(newRecord)
+        with open(filename, 'w') as weeklyUpdateDataFile:
+            try:
+                json.dump(data, weeklyUpdateDataFile, indent=4)
+                return True
+            except Exception as e:
+                queenOpsLogger.addMessage(f"addBlankRecord() -> exception thrown: {e}")
+                return False
+
 
     # read weekly update file #
     def readWeeklyUpdateFile(self, filename: str) -> bool:

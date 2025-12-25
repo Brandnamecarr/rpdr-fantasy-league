@@ -22,7 +22,10 @@ class utilLogger:
         
         if self.removeIfFileExists:
             print('removing old log file')
-            os.remove(self.filename)
+            try:
+                os.remove(self.filename)
+            except Exception as e:
+                print('exception thrown: ', e)
 
         self.messageThreadLock = Lock()
         self.messageThread = Thread(target=self.threadFunction, daemon=True)
@@ -31,8 +34,8 @@ class utilLogger:
     def __del__(self):
         if self.messageThread:
             self.messageThread.stop()
-        if open(self.filename):
-            self.filename.close()
+        # if open(self.filename):
+        #     self.filename.close()
 
     def addMessage(self, message):
         with self.messageThreadLock:

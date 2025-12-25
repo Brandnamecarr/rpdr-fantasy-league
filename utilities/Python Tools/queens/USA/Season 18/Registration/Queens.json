@@ -1,0 +1,100 @@
+[
+    {
+        "name": "Athena Dion",
+        "id": 1,
+        "location": "Miami, FL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Athena Dion.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Briar Blush",
+        "id": 2,
+        "location": "Boston, MA",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Briar Blush.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Ciara Myst",
+        "id": 3,
+        "location": "Indianapolis, IN",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Ciara Myst.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Darlene Mitchell",
+        "id": 4,
+        "location": "Los Angeles, CA",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Darlene Mitchell.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "DD Fuego",
+        "id": 5,
+        "location": "New York, NY",
+        "img": "src/components/data/queens/USA/Season 18/Registration/DD Fuego.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Discord Addams",
+        "id": 6,
+        "location": "St. Petersburg, FL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Discord Addams.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Jane Dont",
+        "id": 7,
+        "location": "Seattle, WA",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Jane Dont.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Juicy Love Dion",
+        "id": 8,
+        "location": "Miami, FL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Juicy Love Dion.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Kenya Pleaser",
+        "id": 9,
+        "location": "Sumter, SC",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Kenya Pleaser.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Mandy Mango",
+        "id": 10,
+        "location": "Philadelphia, PA",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Mandy Mango.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Mia Starr",
+        "id": 11,
+        "location": "West Palm Beach, FL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Mia Starr.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Myki Meeks",
+        "id": 12,
+        "location": "Orlando, FL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Myki Meeks.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Nini Coco",
+        "id": 13,
+        "location": "Denver, CO",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Nini Coco.jpg",
+        "status": "ACTIVE"
+    },
+    {
+        "name": "Vita VonTesse Starr",
+        "id": 14,
+        "location": "Montgomery, AL",
+        "img": "src/components/data/queens/USA/Season 18/Registration/Vita VonTesse Starr.jpg",
+        "status": "ACTIVE"
+    }
+]
