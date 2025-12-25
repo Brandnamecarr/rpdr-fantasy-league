@@ -1,47 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  password String
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
   createdAt DateTime @default(now())
 }
 
 model League {
-  id Int @id @default(autoincrement())
-  leagueName String @unique
-  owner String
-  users String[]
-  maxPlayers Int
-  maxQueensPerTeam Int @default(3)
-  createdAt DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  leagueName       String   @unique
+  owner            String
+  users            String[]
+  maxPlayers       Int
+  createdAt        DateTime @default(now())
+  maxQueensPerTeam Int      @default(3)
 }
 
 model Roster {
-  recordId Int @id @default(autoincrement())
-  leagueName String 
-  username String
-  teamName String
-  queens String[]
+  recordId      Int      @id @default(autoincrement())
+  leagueName    String
+  username      String
+  teamName      String
+  queens        String[]
   currentPoints Int
-  pointUpdates Int[]
+  pointUpdates  Int[]
 }
 
 model Notification {
-  notifId Int @id @default(autoincrement())
-  source String
-  destination String 
-  resolved Boolean @default(false)
-  content String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notifId     Int      @id @default(autoincrement())
+  source      String
+  destination String
+  resolved    Boolean  @default(false)
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Queen {
+  queenId   Int         @id @default(autoincrement())
+  franchise String
+  season    Int
+  name      String
+  status    QueenStatus @default(ACTIVE)
+  location  String
 }
 
 enum QueenStatus {
@@ -51,13 +60,4 @@ enum QueenStatus {
   RUNNER_UP
   UNKNOWN_OR_ERROR
   MS_CONGENIALITY
-}
-
-model Queen {
-  queenId Int @id @default(autoincrement())
-  franchise String
-  season Int
-  name String
-  status QueenStatus @default(ACTIVE)
-  location String
 }

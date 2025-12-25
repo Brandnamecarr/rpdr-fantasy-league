@@ -15,7 +15,7 @@ class User:
 class League:
     id = 0
     leagueName = ''
-    leaugeOwner = ''
+    leagueOwner = ''
     users = [User]
     maxPlayers = 0
     createdOn = None

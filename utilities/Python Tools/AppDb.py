@@ -22,5 +22,10 @@ class AppDb:
         self.appDbLogger.addMessage(f"AppDb.getAllFromTable() -> loading all records from {table}")
         return self.adapter.selectAllFromTable(table)
 
-appDb = AppDb()
-print(appDb.getAllFromTable("User"))
+    def addNewQueensToTable(self, table: str, data):
+        print('inside addNewQueensToTable, data:')
+        queensTuples = [
+            (q['franchise'], q['season'], q['name'], q['status'], q['location'])
+            for q in data
+        ]
+        print(queensTuples)

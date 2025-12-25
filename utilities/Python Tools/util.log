@@ -1,3 +1,5 @@
-TemplateGenerator.makeWeeklySurveyDir() -> making path queens/USA All Stars/Season 11/1
-TemplateGenerator.makeWeeklySurveyDir() -> made path!
-main.py.makeWeeklySurveyDir() -> successfully made directory
+PgAdapter.init() -> reading ./config.json
+PgAdapter.readConfig() -> read data from ./config.json
+postgres, admin, host=localhost, port=5432, dTemplateGenerator.loadAppDb: init() -> just made postgres adapter
+ns/USA/Season 18/Registration
+TemplateGenerator.loadQueenRegistrationData() -> successfully read file

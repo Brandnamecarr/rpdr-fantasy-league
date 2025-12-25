@@ -47,3 +47,6 @@ class PostgresAdapter:
         results = self.cursor.fetchall()
         
         return results
+    
+    def insertNewQueens(self, table: str, data):
+        pass

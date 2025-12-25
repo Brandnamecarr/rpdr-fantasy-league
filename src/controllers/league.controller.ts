@@ -4,6 +4,7 @@ import logger from "../util/LoggerImpl";
 
 // get record of specific league //
 export const getLeague = async (req: Request, res: Response) => {
+    // TODO: add franchise and season //
     const {leaguename} = req.body;
     logger.debug('League.Controller.ts: getLeague() with param: ', {leagueName: leaguename});
     try {
@@ -76,7 +77,7 @@ export const createLeague = async (req: Request, res: Response) => {
         res.status(201).json(league);
     } catch (error) {
         logger.error('League.Controller.ts: Error creating league: ', {error: error});
-        res.status(500).json({error: 'Error creating league'});
+        res.status(500).json({Error: 'Error creating league'});
     }
 };
 
@@ -89,6 +90,6 @@ export const getAvailableLeagues = async (req: Request, res: Response) => {
         res.status(201).json(response);
     } catch(error) {
         logger.error('League.Controller.ts: Error creating league: ', {error: error});
-        res.status(500).json({error: error});
+        res.status(500).json({Error: error});
     }
 };

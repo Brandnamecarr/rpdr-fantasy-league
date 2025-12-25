@@ -73,5 +73,7 @@ if __name__ == '__main__':
     # sendWeeklyUpdate("USA", 18, 1)
     # makeLeagueRegistrationDrop("USA", 18)
     # makeLeagueRegistrationDir("Canada", 99)
-    makeWeeklySurveyDir("USA All Stars", 11, 1)
+    # makeWeeklySurveyDir("USA All Stars", 11, 1)
+    val = tempGen.addNewQueensToTable("USA", 18)
+    print(val)
     time.sleep(5)
