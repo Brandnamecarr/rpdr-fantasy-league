@@ -1,4 +1,7 @@
 import * as ENUMS from '../enums/enums';
+/**
+ * Don't think this is being used since code is using the QueenStatus enum defined in the prisma client not this...
+ */
 
 export function resolveQueenStatus(status: string): ENUMS.QueenStatus {
     let statusAsEnum: ENUMS.QueenStatus = ENUMS.QueenStatus.ACTIVE;

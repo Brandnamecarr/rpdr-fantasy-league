@@ -2,14 +2,14 @@
 // ways to add points
 export enum PointManipulation {
     // positive changes
-    MAXI_CHALLENGE_WIN = 15,
-    SNATCH_GAME_WIN = 20,
-    MINI_CHALLENGE_WIN = 10,
-    TOP_PLACEMENT = 10,
-    SAFE_PLACEMENT = 5,
-    WINS_LIPSYNCH = 10,
-    GOOD_RUNWAY = 10, // toot //
-    ICONIC_MOMENT = 5,
+    MAXI_CHALLENGE_WIN = 25,
+    SNATCH_GAME_WIN = 30,
+    MINI_CHALLENGE_WIN = 20,
+    TOP_PLACEMENT = 20,
+    SAFE_PLACEMENT = 15,
+    WINS_LIPSYNCH = 20,
+    GOOD_RUNWAY = 20, // toot //
+    ICONIC_MOMENT = 15,
 
     // negative changes
     BOTTOM_THREE_PLACEMENT = -5,
