@@ -75,3 +75,13 @@ export const updateQueenStatus = async (name: string, franchise: string, season:
         },
     });
 };
+
+export const findQueenId = (franchise: string, season: number, name: string) => {
+    return prisma.queen.findMany({
+        where: {
+            name: name,
+            franchise: franchise,
+            season: season,
+        },
+    });
+};

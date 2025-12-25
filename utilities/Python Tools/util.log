@@ -1,5 +1,8 @@
 PgAdapter.init() -> reading ./config.json
 PgAdapter.readConfig() -> read data from ./config.json
-postgres, admin, host=localhost, port=5432, dTemplateGenerator.loadAppDb: init() -> just made postgres adapter
-ns/USA/Season 18/Registration
+postgres, admin, host=localhost, port=5432, database=RPDR-FANTASY
+AppDb: init() -> just made postgres adapter
+PgAdapter.init() -> postgres configs below:
 TemplateGenerator.loadQueenRegistrationData() -> successfully read file
+/Season 18/Registration
+PgAdapter.insertNewQueens() -> rowcount == len(data)

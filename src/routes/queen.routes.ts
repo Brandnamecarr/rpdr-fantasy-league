@@ -11,5 +11,6 @@ router.get("/getQueenStatus", queenController.getQueenStatus);
 router.post("/addNewQueen", queenController.addNewQueen);
 router.post("/addNewQueens", queenController.addNewQueens);
 router.post("/updateQueenStatus", queenController.updateQueenStatus);
+router.post("/getQueenId", queenController.getQueenId);
 
 export default router;

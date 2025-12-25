@@ -98,6 +98,7 @@ class TemplateGenerator:
         dirPath = f"{self.QUEENS_DIR}/{franchise}/Season {season}/Registration"
         queensData = []
         if os.path.exists(dirPath):
+            self.tgLogger.addMessage(f"TemplateGenerator.makeLeagueRegistrationFile() -> reading path {dirPath}")
             files = None
             try:
                 files = os.listdir(dirPath)
@@ -122,12 +123,13 @@ class TemplateGenerator:
                 try:
                     with open(dirPath+'/Queens.json', 'w') as outFile:
                         json.dump(queensData, outFile, indent=4)
+                        self.tgLogger.addMessage(f"TemplateGenerator.makeLeagueRegistrationFile() -> successfully wrote file")
                         return True
                 except Exception as e:
-                    print('1st exception thrown: ', e)
+                    self.tgLogger.addMessage(f"TemplateGenerator.makeLeagueRegistrationFile() -> exception thrown trying to write json file: {e}")
                     return False
             except Exception as e:
-                print('2nd exception thrown: ', e)
+                self.tgLogger.addMessage(f"TemplateGenerator.makeLeagueRegistrationFile() -> exception thrown processing queens: {e}")
                 return False
     
     # add queens to Queen db table #

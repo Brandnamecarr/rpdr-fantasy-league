@@ -140,3 +140,24 @@ export const updateQueenStatus = async (req: Request, res: Response) => {
         res.status(500).json({Error: `Error updating queen ${name} status`});
     }
 };
+
+export const getQueenId = async (req: Request, res: Response) => {
+    const {franchise, season, name} = req.body;
+
+    if(franchise === '' || name === '') {
+        logger.error('Queen.Controller.ts: bad parameters in request getQueenId');
+        return res.status(404).json({Error: "Invalid parameters"});
+    }
+    try {
+        let queenRecord = await queenService.findQueenId(franchise, season, name);
+        if(!queenRecord) {
+            logger.error('Queen.Controller.ts: unable to find queenID by specified parameters');
+            return res.status(404).json({Error: "Unable to find queenID by specified parameters"});
+        }
+        logger.debug('Queen.Controller.ts: returning queenRecord from getQueenId()');
+        res.status(201).json(queenRecord);
+    } catch(error) {
+        logger.error('Queen.Controller.ts: error in getQueenId: ', {error});
+        res.status(500).json({Error: 'Error retrieving queenID'});
+    }
+};

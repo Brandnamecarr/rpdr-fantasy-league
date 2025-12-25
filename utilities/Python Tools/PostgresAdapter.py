@@ -48,5 +48,23 @@ class PostgresAdapter:
         
         return results
     
-    def insertNewQueens(self, table: str, data):
-        pass
+    def insertNewQueens(self, data) -> bool:
+        insertQuery = """
+            INSERT INTO "Queen" (franchise, season, name, status, location)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        if not self.connection:
+            self.makeConnection()
+        
+        try:
+            curs = self.connection.cursor()
+            curs.executemany(insertQuery, data)
+            if curs.rowcount == len(data):
+                self.PgAdapterLogger.addMessage(f"PgAdapter.insertNewQueens() -> rowcount == len(data)")
+                self.connection.commit()
+                return True
+            else:
+                self.PgAdapterLogger.addMessage(f"PgAdapter.insertNewQueens() -> curs.rowcount not same as len(data)")
+                return False
+        except Exception as e:
+            self.PgAdapterLogger.addMessage(f"PgAdapter.insertNewQueens() -> threw an exception attemptying query... {e}")

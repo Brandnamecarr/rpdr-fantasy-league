@@ -28,4 +28,5 @@ class AppDb:
             (q['franchise'], q['season'], q['name'], q['status'], q['location'])
             for q in data
         ]
-        print(queensTuples)
+        res = self.adapter.insertNewQueens(queensTuples)
+        return res
