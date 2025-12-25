@@ -7,10 +7,10 @@ import {League, User, Roster} from '@prisma/client';
 
 // weekly update //
 export const weeklyUpdate = async (req: Request, res: Response) => {
-    const {maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
+    const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
 
     try {
-        const resp = await leagueOpsService.weeklyUpdate(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
+        const resp = await leagueOpsService.weeklyUpdate(franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
         if(!resp) {
             logger.error('LeagueOps.Controller.ts: Error in weeklyUpdate(), unable to update points');
             return res.status(404).json({Error: 'Error performing weeklyUpdate operations'});
@@ -41,13 +41,11 @@ export const weeklySurvey = async (req: Request, res: Response) => {
     }
 };
 
-
-
 // add user to league //
 export const addUserToLeague = async (req: Request, res: Response) => {
-    const {email, teamName, leagueName, queens} = req.body;
+    const {email, teamName, leagueName, queens, franchise, season} = req.body;
     try {
-        const result = await leagueService.getLeague(leagueName);
+        const result = await leagueService.getLeague(leagueName, franchise, season);
         if(!result) {
             return res.status(404).json({
                 "Error": "League not found in database"
@@ -55,7 +53,7 @@ export const addUserToLeague = async (req: Request, res: Response) => {
         }
         let league: League = result;
         console.log(league);
-        const resp = await leagueOpsService.addUserToLeague(email, teamName, league, queens);
+        const resp = await leagueOpsService.addUserToLeague(email, teamName, league, queens, league.franchise, league.season);
         res.status(201).json({message:"TODO"});
     } catch(error) {
         console.error(error);
@@ -65,9 +63,9 @@ export const addUserToLeague = async (req: Request, res: Response) => {
 
 // remove user from league //
 export const removeUserFromLeague = async (req: Request, res: Response) => {
-    const {email, leagueName} = req.body;
+    const {email, leagueName, franchise, season} = req.body;
     try {
-        const result = await leagueService.getLeague(leagueName);
+        const result = await leagueService.getLeague(leagueName, franchise, season);
         if(!result) {
             return res.status(404).json({
                 "Error": "League not found in database"
@@ -119,11 +117,42 @@ export const getAllRosters = async (req: Request, res: Response) => {
     }
 };
 
+export const getRostersByFranchiseAndSeason = async (req: Request, res: Response) => {
+    const franchise = req.query.franchise as string || undefined;
+    const seasonParam = req.query.season;
+
+    const season: number = Number(seasonParam) || -1;
+
+    if(!franchise || season === -1) {
+        logger.error(`LeagueOps.Controller.ts: Invalid params ${franchise} or ${seasonParam} in getRosterByFranchiseAndSeason`);
+        return res.status(404).json({Error: `Invalid params ${franchise} or ${seasonParam} in getRosterByFranchiseAndSeason`});
+    }
+    
+    try {
+        let rosters = await leagueOpsService.getRostersByFranchiseAndLeague(franchise, season);
+        if(!rosters) {
+            logger.error(`LeagueOps.Controller.ts: Error getting rosters by franchise and season from database`);
+            return res.status(404).json({Error: "Error getting rosters from database"});
+        }
+        logger.debug(`LeagueOps.Controller.ts: got rosters matching franchise and season from table`);
+        res.status(201).json(rosters);
+    } catch(error) {
+        logger.error(`LeagueOps.Controller.ts: Error getting rosters by franchise and season`);
+        res.status(500).json({Error: 'Error getting rosters by franchise and season'});
+    }
+};
+
 // adds a roster to the db //
 export const addRoster = async (req: Request, res: Response) => {
-    const {leagueName, email, teamName, queens} = req.body;
+    const {leagueName, email, teamName, queens, franchise, season} = req.body;
     try {
-        let result = await leagueOpsService.addNewRoster(leagueName, email, teamName, queens);
+        let result = await leagueOpsService.addNewRoster(leagueName, email, teamName, queens, franchise, season);
+        if(!result) {
+            logger.error('leagueOps.Controller.ts: error adding new roster record into database');
+            return res.status(404).json({Error: 'Error making new roster obj in database'});
+        }
+        logger.debug('leagueOps.Controller.ts: successfully added new record, returning result: ', {result: result});
+        res.status(201).json(result);
     } catch(error) {
         logger.error('leagueOps.Controller.ts: addRoster error: ', {error: error});
         res.status(500).json({"Error": error});

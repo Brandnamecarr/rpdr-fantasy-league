@@ -17,6 +17,8 @@ model User {
 model League {
   id               Int      @id @default(autoincrement())
   leagueName       String   @unique
+  franchise        String @default("USA")
+  season           Int    @default(18)
   owner            String
   users            String[]
   maxPlayers       Int
@@ -29,6 +31,8 @@ model Roster {
   leagueName    String
   username      String
   teamName      String
+  franchise     String @default("USA")
+  season        Int @default(18)
   queens        String[]
   currentPoints Int
   pointUpdates  Int[]

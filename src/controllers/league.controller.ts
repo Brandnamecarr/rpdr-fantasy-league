@@ -4,11 +4,10 @@ import logger from "../util/LoggerImpl";
 
 // get record of specific league //
 export const getLeague = async (req: Request, res: Response) => {
-    // TODO: add franchise and season //
-    const {leaguename} = req.body;
-    logger.debug('League.Controller.ts: getLeague() with param: ', {leagueName: leaguename});
+    const {leaguename, franchise, season} = req.body;
+    logger.debug('League.Controller.ts: getLeague() with param: ', {leagueName: leaguename, franchise: franchise, season: season});
     try {
-        const leagueRecord = await leagueService.getLeague(leaguename);
+        const leagueRecord = await leagueService.getLeague(leaguename, franchise, season);
         if(!leagueRecord) {
             logger.debug('League.Controller.ts: did not get any records back');
             return res.status(404).json({"Error":`Did not find any leagues with name ${leaguename}`});
@@ -62,16 +61,16 @@ export const getLeaguesByUser = async (req: Request, res: Response) => {
 
 // create new league //
 export const createLeague = async (req: Request, res: Response) => {
-    const {leagueName, owner, users, maxPlayers, maxQueensPerTeam} = req.body;
+    const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season} = req.body;
 
     // guard rail to make sure owner ends up in the user array //
     if(!users.includes(owner)) {
         users.push(owner);
     }
 
-    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
+    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam, franchise: franchise, season: season});
     try {
-        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam);
+        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season);
         logger.debug('League.Controller.ts: creating league with status 201');
         logger.debug('Created league: ', {league: league});
         res.status(201).json(league);
@@ -91,5 +90,26 @@ export const getAvailableLeagues = async (req: Request, res: Response) => {
     } catch(error) {
         logger.error('League.Controller.ts: Error creating league: ', {error: error});
         res.status(500).json({Error: error});
+    }
+};
+
+export const getAvailByFranAndSeason = async (req: Request, res: Response) => {
+    const franchise = req.query.franchise as string || undefined;
+    const seasonParam = req.query.season as string || undefined;
+
+    let season: number = Number(seasonParam) || -1;
+    if(!franchise || season === -1) {
+        logger.error('League.Controller.ts: Invalid arguments provided: ', {franchise:franchise, season:season});
+        return res.status(404).json({Error: `Invalid args provided in query`});
+    }
+    try {
+        let leagues = await leagueService.getAvailByFranAndSeason(franchise, season);
+        if(!leagues) {
+            return res.status(404).json({Error: `Unable to find available leagues for ${franchise} and ${season}`});
+        }
+        res.status(201).json(leagues);
+    } catch(error) {
+        logger.error('League.Controller.ts: getAvailByFranAndSeason() -> error getting avail leagues');
+        res.status(500).json({Error: error, Desc: `Failed to get by ${franchise} and ${season}`});
     }
 };

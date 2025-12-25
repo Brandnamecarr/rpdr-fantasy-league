@@ -42,7 +42,7 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
     };
 
 // performs weekly update //
-export const weeklyUpdate = async (maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[], 
+export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[], 
     safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[]) => {
         
         // make weeklyQueenUpdateScores object:
@@ -54,7 +54,7 @@ export const weeklyUpdate = async (maxiWinner: string[], isSnatchGame: boolean, 
 
         // 1. load all records from the Roster column
         try {
-            let rosters = await getAllRosters();
+            let rosters = await getRostersByFranchiseAndLeague(franchise, season);
 
             if(!rosters) {
                 logger.error('LeagueOps.Service.ts: rosters cant be null', {error: "weeklyUpdate error"});
@@ -180,7 +180,7 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
     return null;
 };
 
-export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>) => {
+export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>, franchise: string, season: number) => {
     logger.debug('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
     // 1. Check to see if user is already registered for this league.
@@ -208,6 +208,8 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
             return await prisma.roster.create({
                 data: {
                     leagueName: league.leagueName,
+                    franchise: franchise,
+                    season: season,
                     teamName: teamName,
                     username: email,
                     queens: queens,
@@ -215,7 +217,7 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
                 },
             });
         } else {
-            console.log('not enough room in array for new user');
+            logger.error('leagueOps.Service.ts: not enough room to add the player');
             return null;
         }
     }
@@ -248,8 +250,9 @@ export const removeUserFromLeague = async (email: string, league: League) => {
     }
 };
 
-export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[]) => {
+export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[], franchise: string, season: number) => {
     console.log('TODO: addNewRoster');
+    return null;
 };
 
 // finds all rosters with the leagueName //
@@ -263,4 +266,13 @@ export const getAllRostersByLeague = (leagueName: string) => {
 
 export const getAllRosters = () => {
     return prisma.roster.findMany();
+};
+
+export const getRostersByFranchiseAndLeague = (franchise: string, season: number) => {
+    return prisma.roster.findMany({
+        where: {
+            franchise: franchise,
+            season: season,
+        },
+    });
 };
