@@ -65,3 +65,17 @@ enum QueenStatus {
   UNKNOWN_OR_ERROR
   MS_CONGENIALITY
 }
+
+enum ActivityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model ActiveSeasons {
+  seasonId Int @id @default(autoincrement())
+  franchise String
+  season Int
+  activityStatus ActivityStatus @default(INACTIVE)
+
+  @@unique([franchise, season])
+}

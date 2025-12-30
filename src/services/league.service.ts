@@ -64,6 +64,8 @@ export const getAvailableLeagues = async () => {
             leagueName: true,
             users: true,
             maxPlayers: true,
+            franchise: true,
+            season: true,
         },
     });
 

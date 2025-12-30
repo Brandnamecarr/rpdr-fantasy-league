@@ -44,6 +44,7 @@ export const weeklySurvey = async (req: Request, res: Response) => {
 // add user to league //
 export const addUserToLeague = async (req: Request, res: Response) => {
     const {email, teamName, leagueName, queens, franchise, season} = req.body;
+    console.log({email, teamName, leagueName, queens, franchise, season});
     try {
         const result = await leagueService.getLeague(leagueName, franchise, season);
         if(!result) {
@@ -54,7 +55,10 @@ export const addUserToLeague = async (req: Request, res: Response) => {
         let league: League = result;
         console.log(league);
         const resp = await leagueOpsService.addUserToLeague(email, teamName, league, queens, league.franchise, league.season);
-        res.status(201).json({message:"TODO"});
+        if(!resp) {
+            return res.status(404).json({Error: `Error adding ${email} to ${leagueName}`});
+        }
+        res.status(201).json(resp);
     } catch(error) {
         console.error(error);
         res.status(404).json({error: 'User unable to add to league'});

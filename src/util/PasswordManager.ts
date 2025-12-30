@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcrypt';
+import logger from './LoggerImpl';
 
 // Set the number of salt rounds. Higher is more secure but slower.
 // 10 is a good, common default for modern applications.
@@ -16,11 +17,11 @@ export async function hashPassword(password: string): Promise<string> {
         
         // Hash the password using the generated salt
         const hash = await bcrypt.hash(password, salt);
-        
+        logger.debug('PasswordManager.ts: successfully created hash');
         return hash;
     } catch (error) {
-        console.error("Error hashing password:", error);
-        throw new Error("Failed to hash password.");
+        logger.error('PasswordManager.ts: failed to hash password');
+        throw new Error('Failed to hash password');
     }
 } // hashPassword //
 
@@ -31,15 +32,12 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns A Promise that resolves to a boolean indicating if the passwords match.
  */
 export async function comparePassword(plaintextPassword: string, hash: string): Promise<boolean> {
-    console.log('inside the comparePasswords function');
-    console.log(plaintextPassword);
-    console.log(hash);
     try {
         const isMatch = await bcrypt.compare(plaintextPassword, hash);
-        console.log('isMatch: ', isMatch);
+        logger.debug('PasswordManager.ts: passwords match');
         return isMatch;
     } catch (error) {
-        console.error("Error comparing password:", error);
+        logger.error('PasswordManager.ts: error in comparePasswords');
         return false;
     }
 }
