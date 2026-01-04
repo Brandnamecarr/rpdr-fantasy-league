@@ -4,13 +4,14 @@ import logger from "../util/LoggerImpl";
 
 // get record of specific league //
 export const getLeague = async (req: Request, res: Response) => {
-    const {leaguename, franchise, season} = req.body;
-    logger.debug('League.Controller.ts: getLeague() with param: ', {leagueName: leaguename, franchise: franchise, season: season});
+    const {leagueName, franchise, season} = req.body;
+    console.log({leagueName, franchise, season});
+    logger.debug('League.Controller.ts: getLeague() with param: ', {leagueName: leagueName, franchise: franchise, season: season});
     try {
-        const leagueRecord = await leagueService.getLeague(leaguename, franchise, season);
+        const leagueRecord = await leagueService.getLeague(leagueName, franchise, season);
         if(!leagueRecord) {
-            logger.debug('League.Controller.ts: did not get any records back');
-            return res.status(404).json({"Error":`Did not find any leagues with name ${leaguename}`});
+            logger.error('League.Controller.ts: did not get any records back');
+            return res.status(404).json({"Error":`Did not find any leagues with name ${leagueName}`});
         }
         logger.debug('League.Controller.ts: successfully loaded record from database', {});
         res.json(leagueRecord);

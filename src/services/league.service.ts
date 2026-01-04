@@ -1,3 +1,4 @@
+import { EphemeralKeyInfo } from "tls";
 import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
@@ -13,6 +14,22 @@ export const getLeague = (leaguename: string, franchise: string, season: number)
     });  
 };
 
+const makeNewRoster = async (leagueName: string, franchise: string, season: number, 
+    teamName: string, email: string, queens: string[]
+) => {
+    return await prisma.roster.create({
+        data: {
+            leagueName:leagueName,
+            franchise: franchise,
+            season: season,
+            teamName: teamName,
+            username: email,
+            queens: queens,
+            currentPoints: 0
+        },
+    });
+};
+
 // returns records of all the leagues // 
 export const getAllLeagues = () => {
     logger.debug('League.Service.ts: loading all league records');
@@ -23,17 +40,21 @@ export const getAllLeagues = () => {
 export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number) => {
     // TODO: make sure league name is unique //
     logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
-    return prisma.league.create({
-        data: {
-            leagueName: leaguename,
-            owner: owner,
-            users: users,
-            maxPlayers: maxPlayers,
-            maxQueensPerTeam: maxQueensPerTeam,
-            franchise: franchise,
-            season: season,
-        },
-    });
+    return prisma.$transaction(async (tx) => {
+        const newLeague = prisma.league.create({
+            data: {
+                leagueName: leaguename,
+                owner: owner,
+                users: users,
+                maxPlayers: maxPlayers,
+                maxQueensPerTeam: maxQueensPerTeam,
+                franchise: franchise,
+                season: season,
+            },
+        });
+
+        const newRoster = makeNewRoster(leaguename, franchise, season, teamName, owner,)
+    };
 };
 
 export const getLeaguesByUser = (email: string) => {
