@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { protect } from "../util/TokenManager";
 import * as queenController from '../controllers/queen.controller';
 
 const router = Router();
+router.use(protect);
 
 router.get("/getAll", queenController.getAllQueens);
 router.get("/getQueenByName", queenController.getQueenByName);

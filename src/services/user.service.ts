@@ -110,7 +110,7 @@ export const updatePassword = async (email: string, newHashedPassword: string) =
             email: email,
         },
         data: {
-            password:newHashedPassword,
+            password: newHashedPassword,
         },
     });
 };

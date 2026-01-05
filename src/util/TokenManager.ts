@@ -1,23 +1,21 @@
 import jwt from 'jsonwebtoken';
 import logger from './LoggerImpl';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
+import { AuthRequest, UserTokenPayload } from '../types/Interfaces';
 
-interface UserPayload {
-    userId: number;
-    role: 'admin' | 'user';
-}
 
-const SECRET_KEY = 'your-super-secret-key'; //put this in a .env
+const SECRET_KEY = 'testing'; //put this in a .env
 
-export const generateToken = (user: UserPayload): string => {
+// returns the token after being signed //
+export const generateToken = (user: UserTokenPayload): string => {
     logger.debug('TokenManager.generateToken() -> generating userToken for: ', {user});
     return jwt.sign(user, SECRET_KEY, {expiresIn: '1h'});
 };
 
 export const verifyToken = (token: string) => {
     try {
-        const decoded = jwt.verify(token, SECRET_KEY) as UserPayload;
-        logger.debug('TokenManager.verifyToken() -> verifying ', {userId: decoded.userId});
+        const decoded = jwt.verify(token, SECRET_KEY) as UserTokenPayload;
+        logger.debug('TokenManager.verifyToken() -> verifying ', {userId: decoded.id});
         return decoded;
     } catch(error) {
         logger.error('TokenManager.verifyToken() -> error verifying/invalid token', {token: token});
@@ -37,16 +35,20 @@ export const getAuthHeader = () => {
 };
 
 // protects routes //
-export const protect = (req: Request, res: Response, next: any) => {
-    const token = req.headers.Authorization?.split(' ')[1]; // Bearer <token>
+export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+
+    const token = authHeader?.split(' ')[1] || undefined; // Bearer <token>
+
     if(!token) {
         logger.error('TokenManager.protect() -> Not authorized or no token present.');
         return res.status(401).json({Error: `Not Authorized or no token present`});
     }
+
     try {
-        const decoded = jwt.verify(token, "process.env.JWT_SECRET");
+        const decoded = jwt.verify(token, "process.env.JWT_SECRET") as UserTokenPayload;
         logger.debug('TokenManager.verifyToken() -> token verified!');
-        req.userId = decoded;
+        req.user = decoded;
         next();
     } catch(error) {
         logger.error('TokenManager.verifyToken() -> Token failed verification');

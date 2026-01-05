@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { protect } from "../util/TokenManager";
 import * as leagueOpsController from '../controllers/leagueOps.controller';
 
 const router = Router();
+router.use(protect);
 
 router.get("/getAllRosters", leagueOpsController.getAllRosters);
 router.get("/getRostersByFranchiseAndSeason", leagueOpsController.getRostersByFranchiseAndSeason);

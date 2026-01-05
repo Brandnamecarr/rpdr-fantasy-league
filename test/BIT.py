@@ -123,13 +123,13 @@ class BIT:
         self.bitLogger.addMessage(f"userAuthTest() -> pinging server at {authURL}")
         # correct password test
         body = {
-            "email": "Hannah",
-            "password": "Banana"
+            "email": "HannahBanana@test.com",
+            "password": "Pickle"
         }
-        self.bitLogger.addMessage(f"makeNotificationTest() -> body: {body}")
+        self.bitLogger.addMessage(f"userAuthTest() -> body: {body}")
         try:
             response = self.processRequest(self.makePostReqWrapper(authURL, body))
-            self.bitLogger.addMessage(f"makeNotificationTest() -> got back response from makePostReq:")
+            self.bitLogger.addMessage(f"userAuthTest() -> got back response from makePostReq:")
             self.bitLogger.addMessage(f"{response}")
             # TODO: make sure response has a token #
             if response['statusCode'] == 201:
@@ -139,10 +139,10 @@ class BIT:
                 tr = TestResult('User Authentication Test (Correct Password)', True, response)
                 self.results.append(tr)
         except Exception as e:
-            self.bitLogger.addMessage(f"makeNotificationTest() -> exception thrown")
+            self.bitLogger.addMessage(f"userAuthTest() -> exception thrown")
             tr = TestResult('User Authentication Test (Corret Password)', False, str(e))
             self.results.append(tr)
-            self.bitLogger.addMessage(f"makeNotificationTest() -> {e}")
+            self.bitLogger.addMessage(f"userAuthTest() -> {e}")
 
     # tests that users can register accounts # 
     def userRegistrationTest(self):
@@ -158,25 +158,33 @@ class BIT:
         self.bitLogger.addMessage(f"userRegistrationTest() -> response: ")
         self.bitLogger.addMessage(f"{response}")
         if response['statusCode'] == 201:
-            self.bitLogger.addMessage(f"userRegistrationTest() status_code: {result['statusCode']}")
-            self.results.append(TestResult('User Registration Test', True, result))
+            self.bitLogger.addMessage(f"userRegistrationTest() status_code: {response['statusCode']}")
+            self.results.append(TestResult('User Registration Test', True, response))
         else:
-            self.bitLogger.addMessage(f"userRegistrationTest() -> status_code: {result['statusCode']}")
-            self.results.append(TestResult('User Registration Test', False, result))
+            self.bitLogger.addMessage(f"userRegistrationTest() -> status_code: {response['statusCode']}")
+            self.results.append(TestResult('User Registration Test', False, response))
 
     # tests that users can register their league
     def leagueCreationTest(self) -> TestResult:
         leagueCreationUrl = "/league/createLeague"
+        self.bitLogger.addMessage(f"leagueCreationTest() -> pinging server at {leagueCreationUrl} endpoint")
+        # const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, teamName, franchise, season, queens} = req.body;
         body = {
             'leagueName': "BIT's League",
             'owner': "BIT@test.com",
-            'users': ["BIT@test.com"],
-            'maxPlayers': 3
+            'maxPlayers': 3,
+            'maxQueensPerTeam': 2,
+            'teamName': 'testName',
+            'franchise': 'USA',
+            'season': 18,
+            'queens': ['Discord Addams', 'Briar Blush', 'Juicy Love Dion']
         }
         response = self.processRequest(self.makePostReqWrapper(leagueCreationUrl, body))
         if response['statusCode'] == 201:
+            self.bitLogger.addMessage(f"leagueCreationTest() -> got back response: {response}")
             self.results.append(TestResult('League Creation Test', True, response))
         else:
+            self.bitLogger.addMessage(f"leagueCreationTest() -> got back response: {response}")
             self.results.append(TestResult('League Creation Test', False, response))
     
     # get league by name #
@@ -255,7 +263,7 @@ class BIT:
             self.results.append(TestResult('Remove User From League Test', True, response))
         else:
             self.bitLogger.addMessage(f"removeUserFromLeagueTest() -> test failed")
-            self.results.append(TestResults('Remove User From League Test', False, response))
+            self.results.append(TestResult('Remove User From League Test', False, response))
 
     # test of weeklySurvey #
     def weeklySurveyTest(self) -> TestResult:
@@ -272,7 +280,7 @@ class BIT:
             self.results.append(TestResult('Weekly Survey Test', True, response))
         else:
             self.bitLogger.addMessage(f"weeklySurveyTest() -> didn't get 201 response, test failed")
-            self.results.append(TestResults('Weekly Survey Test', False, response))
+            self.results.append(TestResult('Weekly Survey Test', False, response))
 
     # tests that data will be updated #
     # very important route: used to adjust user's points #
@@ -316,7 +324,7 @@ class BIT:
             'email': '',
             'leagueName': ''
         }
-        response = self.processRequest(self.makePostReqWrapper(getRosterByLeague, body))
+        response = self.processRequest(self.makePostReqWrapper(getRosterByLeagueUrl, body))
         self.bitLogger.addMessage(f"getRosterByLeagueTest() -> got repsonse: {response}")
         if response['statusCode'] == 201:
             self.bitLogger.addMessage(f"getRosterByLeagueTest() -> got back status 201, test passed")
@@ -401,7 +409,8 @@ if __name__ == '__main__':
     bitInstance = BIT(ip, port)
     
     # bitInstance.getLeagueByNameTest()
-    bitInstance.getAllLeaguesTest()
+    # bitInstance.getAllLeaguesTest()
+    bitInstance.userAuthTest()
     # bitInstance.makeNotificationTest()
     # bitInstance.updateNotificationTest()
 

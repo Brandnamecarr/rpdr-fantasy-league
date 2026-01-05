@@ -3,7 +3,8 @@ import logger from "../util/LoggerImpl";
 
 import { getLeague } from "./league.service";
 import {League, Roster, User} from '@prisma/client';
-import {WeeklyBonusPoints, PointManipulation, QueenStatus, LeaguePointAwards} from '../enums/enums';
+import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards} from '../enums/enums';
+import { QueenStatus } from "@prisma/client";
 
 // make the weeklyUpdate point updater object //
 // goes through the list and determins how many points each queen will gain/lose this week //

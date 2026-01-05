@@ -1,4 +1,3 @@
-import { EphemeralKeyInfo } from "tls";
 import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
@@ -37,24 +36,32 @@ export const getAllLeagues = () => {
 };
 
 // creates a league in the database // 
-export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number) => {
+export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number, teamName: string, queens: string[]) => {
     // TODO: make sure league name is unique //
     logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
-    return prisma.$transaction(async (tx) => {
-        const newLeague = prisma.league.create({
-            data: {
-                leagueName: leaguename,
-                owner: owner,
-                users: users,
-                maxPlayers: maxPlayers,
-                maxQueensPerTeam: maxQueensPerTeam,
-                franchise: franchise,
-                season: season,
-            },
-        });
+    
+    const newLeague = prisma.league.create({
+        data: {
+            leagueName: leaguename,
+            owner: owner,
+            users: users,
+            maxPlayers: maxPlayers,
+            maxQueensPerTeam: maxQueensPerTeam,
+            franchise: franchise,
+            season: season,
+        },
+    });
 
-        const newRoster = makeNewRoster(leaguename, franchise, season, teamName, owner,)
-    };
+    if(!newLeague) {
+        logger.error('League.Service.ts: createLeague failed to make new league', {leaguename: leaguename});
+        return null;
+    }
+
+    const newRoster = makeNewRoster(leaguename, franchise, season, teamName, owner, queens);
+    if(!newRoster) {
+        logger.error('League.Service.ts: createLeague failed to make roster for ', {leaguename: leaguename, email: owner});
+        return null;
+    }
 };
 
 export const getLeaguesByUser = (email: string) => {

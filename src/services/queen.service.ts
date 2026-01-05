@@ -1,7 +1,6 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 import * as ENUMS from '../enums/enums';
-import * as QueenStatusHelper from '../util/QueenStatusHelper';
 import * as INTERFACES from '../types/Interfaces';
 import { QueenStatus } from "@prisma/client";
 

@@ -32,11 +32,11 @@ export enum LeaguePointAwards {
     FAN_FAVORITE = 10
 } // LeaguePointAwards Enum//
 
-export enum QueenStatus {
-    ACTIVE,
-    ELIMINATED,
-    WINNER,
-    MISS_CONGENIALITY,
-    UNKNOWN_OR_ERROR,
-    RUNNERUP
-} //QueenStatus Enum//
+// export enum QueenStatus {
+//     ACTIVE,
+//     ELIMINATED,
+//     WINNER,
+//     MISS_CONGENIALITY,
+//     UNKNOWN_OR_ERROR,
+//     RUNNERUP
+// } //QueenStatus Enum//

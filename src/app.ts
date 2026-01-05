@@ -11,7 +11,6 @@ import userRoutes from './routes/user.routes';
 import leagueRoutes from './routes/league.routes';
 import leagueOpsRoutes from './routes/leagueOps.routes';
 import notifRoutes from './routes/notification.routes';
-import tokenRoutes from './routes/token.routes';
 import queenRoutes from './routes/queen.routes';
 import activeSeasonRoutes from './routes/activeSeasons.routes';
 
@@ -30,7 +29,6 @@ app.use('/league', leagueRoutes);
 app.use('/leagueOps', leagueOpsRoutes);
 app.use('/notifications', notifRoutes);
 app.use('/queens', queenRoutes);
-app.use('/tokens', tokenRoutes);
 app.use('/activeSeason', activeSeasonRoutes);
 
 export default app;

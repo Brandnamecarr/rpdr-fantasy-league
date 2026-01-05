@@ -1,7 +1,10 @@
 import { Router } from "express";
+import { protect } from "../util/TokenManager";
 import * as leagueController from "../controllers/league.controller";
 
 const router = Router();
+
+router.use(protect);
 
 router.get("/getAllLeagues", leagueController.getAllLeagues);
 router.get("/allUserLeagues", leagueController.getLeaguesByUser);

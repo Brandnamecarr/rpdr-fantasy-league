@@ -62,7 +62,7 @@ export const getLeaguesByUser = async (req: Request, res: Response) => {
 
 // create new league //
 export const createLeague = async (req: Request, res: Response) => {
-    const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season} = req.body;
+    const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, teamName, franchise, season, queens} = req.body;
 
     // guard rail to make sure owner ends up in the user array //
     if(!users.includes(owner)) {
@@ -71,7 +71,7 @@ export const createLeague = async (req: Request, res: Response) => {
 
     logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam, franchise: franchise, season: season});
     try {
-        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season);
+        const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season, teamName, queens);
         logger.debug('League.Controller.ts: creating league with status 201');
         logger.debug('Created league: ', {league: league});
         res.status(201).json(league);
