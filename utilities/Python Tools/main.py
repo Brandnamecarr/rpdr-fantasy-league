@@ -1,5 +1,5 @@
-from QueenOps import QueenOps
-from TemplateGenerator import TemplateGenerator
+from src.QueenOps import QueenOps
+from src.TemplateGenerator import TemplateGenerator
 import os
 from utilLogger import utilLogger
 import time

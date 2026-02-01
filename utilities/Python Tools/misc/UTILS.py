@@ -1,6 +1,6 @@
 import requests
 from CONSTS import *
-from utilLogger import utilLogger
+from logger.utilLogger import utilLogger
 
 logger = utilLogger()
 

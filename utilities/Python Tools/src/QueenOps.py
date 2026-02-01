@@ -3,9 +3,9 @@ This file is going to help automate the following components:
 1. Weekly Updates
 
 '''
-from utilLogger import utilLogger
+from logger.utilLogger import utilLogger
 import json
-from appTypes import *
+from misc.appTypes import *
 
 import os
 import json
@@ -51,7 +51,7 @@ class QueenOps:
                 json.dump(data, weeklyUpdateDataFile, indent=4)
                 return True
             except Exception as e:
-                queenOpsLogger.addMessage(f"addBlankRecord() -> exception thrown: {e}")
+                self.queenOpsLogger.addMessage(f"addBlankRecord() -> exception thrown: {e}")
                 return False
 
 

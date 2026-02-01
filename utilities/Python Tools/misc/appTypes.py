@@ -55,17 +55,6 @@ class Roster:
         self.currentPoints = currentPoints
         self.pointUpdates = pointUpdates
 
-class AuthTokens:
-    
-    userID = 0
-    email = ''
-    token = ''
-
-    def __init__(self, id, email, token):
-        self.userID = id
-        self.email = email
-        self.token = token
-
 class Notification:
     notifId = 0
     source = ''

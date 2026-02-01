@@ -7,11 +7,11 @@ Going to be used to generate the HTML templates for:
 import os
 import json
 from string import Template
-from utilLogger import utilLogger
+from logger.utilLogger import utilLogger
 from pathlib import Path
-from UTILS import *
+from misc.UTILS import *
 import CONSTS
-from AppDb import AppDb
+from db.AppDb import AppDb
 
 class TemplateGenerator:
     tgLogger = None
