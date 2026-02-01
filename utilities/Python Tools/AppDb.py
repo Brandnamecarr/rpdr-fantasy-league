@@ -30,3 +30,7 @@ class AppDb:
         ]
         res = self.adapter.insertNewQueens(queensTuples)
         return res
+    
+    # this empties all records from the database #
+    def flushDatabase(self):
+        pass

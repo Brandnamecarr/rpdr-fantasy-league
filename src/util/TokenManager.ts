@@ -13,6 +13,7 @@ export const generateToken = (user: UserTokenPayload): string => {
 };
 
 export const verifyToken = (token: string) => {
+    logger.debug(`TokenManager.verifyToken() -> token: ${token}`);
     try {
         const decoded = jwt.verify(token, SECRET_KEY) as UserTokenPayload;
         logger.debug('TokenManager.verifyToken() -> verifying ', {userId: decoded.id});
@@ -37,7 +38,7 @@ export const getAuthHeader = () => {
 // protects routes //
 export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-
+    console.log(`authHeader: ${authHeader}`);
     const token = authHeader?.split(' ')[1] || undefined; // Bearer <token>
 
     if(!token) {
@@ -46,7 +47,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
     }
 
     try {
-        const decoded = jwt.verify(token, "process.env.JWT_SECRET") as UserTokenPayload;
+        const decoded = jwt.verify(token, SECRET_KEY) as UserTokenPayload;
         logger.debug('TokenManager.verifyToken() -> token verified!');
         req.user = decoded;
         next();

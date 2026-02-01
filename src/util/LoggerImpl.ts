@@ -79,7 +79,7 @@ export class ConsoleLogger implements CustomLogger {
 
 const logger: CustomLogger = new ConsoleLogger(
     'rpdr-fantasy-app',
-    LogLevel.INFO
+    LogLevel.DEBUG
 );
 
 export default logger;
