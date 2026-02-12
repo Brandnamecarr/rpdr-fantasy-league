@@ -9,6 +9,9 @@ Current Priorities:
 Upcoming Priorities:
 1. E2E Completion for web app
 2. Backend testing (finish BIT)
+3. Work on script to generate documentation
+    3a. Thinking I'll do a comment with some kind of marker and have a python script parse that
+    3b. Use AI to explain code 
 
 Long-term Priorities:
 1. Swift App development
