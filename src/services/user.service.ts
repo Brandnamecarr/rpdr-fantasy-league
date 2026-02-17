@@ -2,12 +2,17 @@ import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 import {League, User, Roster} from '@prisma/client';
 
-// returns users // 
+// Doc: Queries the database for all user records.
+// Doc: Args: None
+// Doc: Returns: Promise<User[]> - Array of all user records
 export const getUsers = () => {
     logger.debug('User.Service.ts: fetching all users from database');
     return prisma.user.findMany();  
 };
 
+// Doc: Queries the database for all user email addresses.
+// Doc: Args: None
+// Doc: Returns: Promise<{email: string}[]> - Array of objects containing email addresses
 export const getAllEmails = () => {
     logger.debug('User.Service.ts: fetching all usernames from db');
     return prisma.user.findMany({
@@ -17,6 +22,9 @@ export const getAllEmails = () => {
     });
 };
 
+// Doc: Creates a new user record in the database with email and hashed password.
+// Doc: Args: email (string) - User's email address, password (string) - User's hashed password
+// Doc: Returns: Promise<User> - The created user record
 export const createUser = (email: string, password: string) => {
     logger.debug('User.Service.ts: creating user: ', {email: email});
     return prisma.user.create({
@@ -27,7 +35,9 @@ export const createUser = (email: string, password: string) => {
     });
 };
 
-// gets the user record by name.
+// Doc: Queries the database for a specific user by email address.
+// Doc: Args: email (string) - The user's email address
+// Doc: Returns: Promise<User | null> - The user record or null if not found
 export const getUserByName = async (email: string) => {
     logger.debug('User.Service.ts: finding user in database: ', {email: email});
     return prisma.user.findUnique({
@@ -37,7 +47,9 @@ export const getUserByName = async (email: string) => {
     });
 };
 
-// loads user entire record //
+// Doc: Loads a user's complete record including owned leagues, joined leagues, and rosters (deduplicated).
+// Doc: Args: email (string) - The user's email address
+// Doc: Returns: Promise<{userRecord: User, leagues: League[], rosters: Roster[]} | undefined> - Object containing user data, leagues, and rosters or undefined if user not found
 export const getUserRecord = async (email: string) => {
     logger.debug('User.Service.ts: finding all user records in database: ', {email: email});
     let userRecord = await getUserByName(email);
@@ -103,6 +115,9 @@ export const getUserRecord = async (email: string) => {
     return collectedData;
 };
 
+// Doc: Updates a user's password in the database with a new hashed password.
+// Doc: Args: email (string) - The user's email address, newHashedPassword (string) - The new hashed password
+// Doc: Returns: Promise<User> - The updated user record
 export const updatePassword = async (email: string, newHashedPassword: string) => {
     logger.debug("User.Service.ts: Updating password with payload: ", {email: email});
     return await prisma.user.update({

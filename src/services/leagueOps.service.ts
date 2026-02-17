@@ -6,10 +6,11 @@ import {League, Roster, User} from '@prisma/client';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards} from '../enums/enums';
 import { QueenStatus } from "@prisma/client";
 
-// make the weeklyUpdate point updater object //
-// goes through the list and determins how many points each queen will gain/lose this week //
-const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], 
-    topQueens: string[], safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], 
+// Doc: Helper function that calculates point changes for queens based on weekly episode results.
+// Doc: Args: maxiWinner (string[]) - Maxi challenge winners, isSnatchGame (boolean) - Whether episode is Snatch Game, miniWinner (string[]) - Mini challenge winners, topQueens (string[]) - Top placement queens, safeQueens (string[]) - Safe queens, bottomQueens (string[]) - Bottom placement queens, lipSyncWinner (string[]) - Lip sync winners, eliminated (string[]) - Eliminated queens
+// Doc: Returns: Record<string, number> - Object mapping queen names to their point changes
+const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[],
+    topQueens: string[], safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[],
     eliminated: string[]
     ) => {
         // make update obj //
@@ -42,8 +43,10 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
         return weeklyQueenScores;
     };
 
-// performs weekly update //
-export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[], 
+// Doc: Processes weekly episode results and updates all affected rosters' points using a database transaction.
+// Doc: Args: franchise (string) - Franchise name, season (number) - Season number, maxiWinner (string[]) - Maxi challenge winners, isSnatchGame (boolean) - Whether episode is Snatch Game, miniWinner (string[]) - Mini challenge winners, topQueens (string[]) - Top placement queens, safeQueens (string[]) - Safe queens, bottomQueens (string[]) - Bottom placement queens, lipSyncWinner (string[]) - Lip sync winners, eliminated (string[]) - Eliminated queens
+// Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
+export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[],
     safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[]) => {
         
         // make weeklyQueenUpdateScores object:
@@ -98,6 +101,9 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
         }
 };
 
+// Doc: Helper function that calculates bonus/penalty points from weekly survey results.
+// Doc: Args: toots (string[]) - Queens with good runways, boots (string[]) - Queens with bad runways, iconicQueens (string[]) - Queens with iconic moments, cringeQueens (string[]) - Queens with cringe moments, queenOfTheWeek (string[]) - Queen(s) of the week
+// Doc: Returns: Record<string, number> - Object mapping queen names to their point adjustments
 const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]) => {
     let update: Record<string, number> = {};
 
@@ -134,7 +140,9 @@ const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens
     return update;
 };
 
-// gets weekly survey data and adjusts all users with matching fields //
+// Doc: Processes weekly survey results and updates all rosters' points based on bonus/penalty categories.
+// Doc: Args: toots (string[]) - Queens with good runways, boots (string[]) - Queens with bad runways, iconicQueens (string[]) - Queens with iconic moments, cringeQueens (string[]) - Queens with cringe moments, queenOfTheWeek (string[]) - Queen(s) of the week
+// Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
 export const weeklySurvey = async (toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]) => {
     //1. Do point adjustments //
     let weeklySurveyUpdate = weeklySurveyObjectHelper(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
@@ -193,6 +201,9 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
     return null;
 };
 
+// Doc: Adds a user to a league and creates their roster if there's space and they're not already a member.
+// Doc: Args: email (string) - User email, teamName (string) - Team name, league (League) - League object to join, queens (Array<string>) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
+// Doc: Returns: Promise<Roster | null> - The created roster record or null if user already in league or league is full
 export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>, franchise: string, season: number) => {
     logger.debug('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
@@ -240,6 +251,9 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
     }
 };
 
+// Doc: Removes a user from a league by filtering them out of the users array.
+// Doc: Args: email (string) - User email to remove, league (League) - League object to remove user from
+// Doc: Returns: Promise<void> - TODO: Should also remove the roster record
 export const removeUserFromLeague = async (email: string, league: League) => {
     // 1. Check that the player is in the user list
     let isInUsers: boolean = league.users.includes(email);
@@ -263,12 +277,17 @@ export const removeUserFromLeague = async (email: string, league: League) => {
     }
 };
 
+// Doc: TODO: Creates a new roster record (currently not implemented).
+// Doc: Args: leagueName (string) - League name, email (string) - User email, teamName (string) - Team name, queens (string[]) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
+// Doc: Returns: null - Not yet implemented
 export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[], franchise: string, season: number) => {
     console.log('TODO: addNewRoster');
     return null;
 };
 
-// finds all rosters with the leagueName //
+// Doc: Queries the database for all rosters belonging to a specific league.
+// Doc: Args: leagueName (string) - The league name to filter by
+// Doc: Returns: Promise<Roster[]> - Array of roster records for the specified league
 export const getAllRostersByLeague = (leagueName: string) => {
     return prisma.roster.findMany({
         where: {
@@ -277,10 +296,16 @@ export const getAllRostersByLeague = (leagueName: string) => {
     });
 };
 
+// Doc: Queries the database for all roster records.
+// Doc: Args: None
+// Doc: Returns: Promise<Roster[]> - Array of all roster records
 export const getAllRosters = () => {
     return prisma.roster.findMany();
 };
 
+// Doc: Queries the database for all rosters filtered by franchise and season.
+// Doc: Args: franchise (string) - The franchise name, season (number) - The season number
+// Doc: Returns: Promise<Roster[]> - Array of roster records matching franchise and season
 export const getRostersByFranchiseAndLeague = (franchise: string, season: number) => {
     return prisma.roster.findMany({
         where: {

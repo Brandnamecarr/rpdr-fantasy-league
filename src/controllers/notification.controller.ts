@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import * as notifService from '../services/notification.service';
 import logger from "../util/LoggerImpl";
 
+// Doc: Retrieves all notifications for a specific user.
+// Doc: Args: req (Request) - Express request object with body containing {email: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /notifications/user or GET /notifications/user
 export const getUserNotifs = async (req: Request, res: Response) => {
     const {email} = req.body;
     logger.debug('Notification.Controller.ts: getting allUserNotifs for: ', {email: email});
@@ -15,6 +18,9 @@ export const getUserNotifs = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Retrieves all active (unread) notifications for a specific user.
+// Doc: Args: req (Request) - Express request object with body containing {email: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /notifications/active or GET /notifications/active
 export const getAllActiveNotifs = async (req: Request, res: Response) => {
     const {email} = req.body;
 
@@ -28,6 +34,9 @@ export const getAllActiveNotifs = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Creates a new notification with source, destination, and content.
+// Doc: Args: req (Request) - Express request object with body containing {source: string, destination: string, content: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /notifications
 export const makeNewNotification = async (req: Request, res: Response) => {
     const {source, destination, content} = req.body;
     logger.debug('Notification.Controller.ts: makeNewNotification got payload: ', {data: req.body});
@@ -45,6 +54,9 @@ export const makeNewNotification = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Updates a notification's status (e.g., marks as read).
+// Doc: Args: req (Request) - Express request object with body containing {notifId: string}, res (Response) - Express response object
+// Doc: Route: Likely PUT /notifications or PATCH /notifications
 export const updateNotifStatus = async (req: Request, res: Response) => {
     const {notifId} = req.body;
     try {

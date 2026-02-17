@@ -5,7 +5,9 @@ import * as leagueService from '../services/league.service';
 
 import {League, User, Roster} from '@prisma/client';
 
-// weekly update //
+// Doc: Processes weekly episode results and updates point totals for all affected rosters.
+// Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, maxiWinner: string, isSnatchGame: boolean, miniWinner: string, topQueens: string[], safeQueens: string[], bottomQueens: string[], linSyncWinner: string, eliminated: string[]}, res (Response) - Express response object
+// Doc: Route: Likely POST /league-ops/weekly-update
 export const weeklyUpdate = async (req: Request, res: Response) => {
     const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
 
@@ -23,7 +25,9 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
     }
 };
 
-// weekly survey //
+// Doc: Processes weekly survey results including toots, boots, iconic/cringe queens, and queen of the week.
+// Doc: Args: req (Request) - Express request object with body containing {toots: any[], boots: any[], iconicQueens: any[], cringeQueens: any[], queenOfTheWeek: any}, res (Response) - Express response object
+// Doc: Route: Likely POST /league-ops/weekly-survey
 export const weeklySurvey = async (req: Request, res: Response) => {
     const {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek} = req.body;
 
@@ -41,11 +45,12 @@ export const weeklySurvey = async (req: Request, res: Response) => {
     }
 };
 
-// add user to league //
+// Doc: Adds a user to an existing league with their team name and selected queens.
+// Doc: Args: req (Request) - Express request object with body containing {username: string, teamName: string, leagueName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
+// Doc: Route: Likely POST /league-ops/add-user
 export const addUserToLeague = async (req: Request, res: Response) => {
     const {username, teamName, leagueName, queens, franchise, season} = req.body;
-    console.log('AddUserToLeague below:');
-    console.log({username, teamName, leagueName, queens, franchise, season});
+    logger.debug('LeagueOps.Controller.ts: addUserToLeague() called with: ', {username, teamName, leagueName, franchise, season});
     try {
         const result = await leagueService.getLeague(leagueName, franchise, season);
         if(!result) {
@@ -54,19 +59,21 @@ export const addUserToLeague = async (req: Request, res: Response) => {
             });
         }
         let league: League = result;
-        console.log(league);
+        logger.debug('LeagueOps.Controller.ts: Found league: ', {leagueName: league.leagueName});
         const resp = await leagueOpsService.addUserToLeague(username, teamName, league, queens, league.franchise, league.season);
         if(!resp) {
-            return res.status(404).json({Error: `Error adding ${username} to ${leagueName}`});
+            return res.status(400).json({Error: `Error adding ${username} to ${leagueName}`});
         }
         res.status(201).json(resp);
     } catch(error) {
-        console.error(error);
-        res.status(404).json({error: 'User unable to add to league'});
+        logger.error('LeagueOps.Controller.ts: error in addUserToLeague(): ', {error: error});
+        res.status(500).json({error: 'User unable to add to league'});
     }
 };
 
-// remove user from league //
+// Doc: Removes a user from an existing league.
+// Doc: Args: req (Request) - Express request object with body containing {email: string, leagueName: string, franchise: string, season: number}, res (Response) - Express response object
+// Doc: Route: Likely DELETE /league-ops/remove-user or POST /league-ops/remove-user
 export const removeUserFromLeague = async (req: Request, res: Response) => {
     const {email, leagueName, franchise, season} = req.body;
     try {
@@ -78,14 +85,16 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
         } //if //
         let league:League = result;
         const resp = await leagueOpsService.removeUserFromLeague(email, league);
-        res.status(201).json(resp);
+        res.status(200).json(resp);
     } catch (error) {
-        console.error(error);
-        res.status(404).json({error: 'Unable to remove user from league'});
+        logger.error('LeagueOps.Controller.ts: error in removeUserFromLeague(): ', {error: error});
+        res.status(500).json({error: 'Unable to remove user from league'});
     }
 };
 
-// gets all rosters by league //
+// Doc: Retrieves all team rosters for a specific league.
+// Doc: Args: req (Request) - Express request object with body containing {email: string, token: string, leagueName: string}, res (Response) - Express response object
+// Doc: Route: Likely GET /league-ops/rosters/league or POST /league-ops/rosters/league
 export const getAllRostersByLeague = async (req: Request, res: Response) => {
     //i think token gets used in the routes file //
     // might not need to pass in //
@@ -109,6 +118,9 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
     } // catch //
 };
 
+// Doc: Retrieves all rosters from the database (for internal/testing purposes).
+// Doc: Args: req (Request) - Express request object, res (Response) - Express response object
+// Doc: Route: Likely GET /league-ops/rosters
 export const getAllRosters = async (req: Request, res: Response) => {
     try {
         let response = await leagueOpsService.getAllRosters();
@@ -122,6 +134,9 @@ export const getAllRosters = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Retrieves all rosters filtered by specific franchise and season.
+// Doc: Args: req (Request) - Express request object with query parameters franchise (string) and season (number), res (Response) - Express response object
+// Doc: Route: Likely GET /league-ops/rosters?franchise=US&season=16
 export const getRostersByFranchiseAndSeason = async (req: Request, res: Response) => {
     const franchise = req.query.franchise as string || undefined;
     const seasonParam = req.query.season;
@@ -147,7 +162,9 @@ export const getRostersByFranchiseAndSeason = async (req: Request, res: Response
     }
 };
 
-// adds a roster to the db //
+// Doc: Creates and adds a new roster record to the database.
+// Doc: Args: req (Request) - Express request object with body containing {leagueName: string, email: string, teamName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
+// Doc: Route: Likely POST /league-ops/rosters
 export const addRoster = async (req: Request, res: Response) => {
     const {leagueName, email, teamName, queens, franchise, season} = req.body;
     try {

@@ -1,5 +1,6 @@
-
-// ways to add points
+// Doc: Enum definitions for point scoring system in the fantasy league.
+// Doc: Defines point values for various placement outcomes, achievements, and penalties.
+// Doc: Point values for weekly episode placements and outcomes (both positive and negative)
 export enum PointManipulation {
     // positive changes
     MAXI_CHALLENGE_WIN = 25,
@@ -17,14 +18,14 @@ export enum PointManipulation {
     ELIMINATED = -15,
     BAD_RUNWAY = -5, // boot // 
     CRINGE_MOMENT = -5
-} // PointManipulation Enum // 
+} // PointManipulation Enum //
 
-// Ways to earn bonus points // 
+// Doc: Bonus point values for weekly awards
 export enum WeeklyBonusPoints {
     LEAGUE_QUEEN_OF_WEEK = 10
 } // WeeklyBonusPoints Enum //
 
-// League Enum // 
+// Doc: Point values for end-of-season league awards
 export enum LeaguePointAwards {
     MOST_IMPROVED = 10,
     MISS_CONGENIALITY = 20,

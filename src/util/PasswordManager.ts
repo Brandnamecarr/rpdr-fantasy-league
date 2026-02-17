@@ -1,15 +1,13 @@
+// Doc: Password hashing and comparison utilities using bcrypt for secure password storage.
 import * as bcrypt from 'bcrypt';
 import logger from './LoggerImpl';
 
-// Set the number of salt rounds. Higher is more secure but slower.
-// 10 is a good, common default for modern applications.
-const SALT_ROUNDS = 10; 
+// Doc: Number of salt rounds for bcrypt (10 is a good balance of security and performance)
+const SALT_ROUNDS = 10;
 
-/**
- * Hashes a plaintext password using Bcrypt.
- * @param password The plaintext password string.
- * @returns A Promise that resolves to the hashed password string.
- */
+// Doc: Hashes a plaintext password using bcrypt with salt.
+// Doc: Args: password (string) - The plaintext password to hash
+// Doc: Returns: Promise<string> - The hashed password string
 export async function hashPassword(password: string): Promise<string> {
     try {
         // Generate the salt
@@ -25,12 +23,9 @@ export async function hashPassword(password: string): Promise<string> {
     }
 } // hashPassword //
 
-/**
- * Compares a plaintext password against a stored hash.
- * @param plaintextPassword The password provided by the user (e.g., during login).
- * @param hash The stored hash from the database.
- * @returns A Promise that resolves to a boolean indicating if the passwords match.
- */
+// Doc: Compares a plaintext password against a stored bcrypt hash to verify credentials.
+// Doc: Args: plaintextPassword (string) - The password provided by the user, hash (string) - The stored hash from the database
+// Doc: Returns: Promise<boolean> - True if passwords match, false otherwise
 export async function comparePassword(plaintextPassword: string, hash: string): Promise<boolean> {
     try {
         const isMatch = await bcrypt.compare(plaintextPassword, hash);

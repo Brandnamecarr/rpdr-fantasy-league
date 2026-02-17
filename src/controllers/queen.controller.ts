@@ -4,7 +4,9 @@ import logger from "../util/LoggerImpl";
 import * as INTERFACES from '../types/Interfaces';
 import { QueenStatus } from "@prisma/client";
 
-// returns entire contents of table //
+// Doc: Retrieves all queen records from the database.
+// Doc: Args: req (Request) - Express request object, res (Response) - Express response object
+// Doc: Route: Likely GET /queens
 export const getAllQueens = async (req: Request, res: Response) => {
     try {
         let queens = await queenService.getAllQueens();
@@ -18,7 +20,9 @@ export const getAllQueens = async (req: Request, res: Response) => {
     }
 };
 
-// returns all records matching the queen name//
+// Doc: Retrieves all queen records matching a specific name.
+// Doc: Args: req (Request) - Express request object with query parameter name (string), res (Response) - Express response object
+// Doc: Route: Likely GET /queens/name?name=QueenName
 export const getQueenByName = async (req: Request, res: Response) => {
     const name = req.query.name as string | undefined;
 
@@ -38,8 +42,9 @@ export const getQueenByName = async (req: Request, res: Response) => {
     }
 };
 
-// takes franchise/season/name and returns all matching records //
-// (including status)
+// Doc: Retrieves a queen's record and status by franchise, season, and name.
+// Doc: Args: req (Request) - Express request object with query parameters franchise (string), season (number), and name (string), res (Response) - Express response object
+// Doc: Route: Likely GET /queens/status?franchise=US&season=16&name=QueenName
 export const getQueenStatus = async(req:Request, res: Response) => {
     const franchiseParam = req.query.franchise;
     const seasonParam = req.query.season;
@@ -64,7 +69,9 @@ export const getQueenStatus = async(req:Request, res: Response) => {
     }
 };
 
-// returns ALL Queens by Franchise and Season //
+// Doc: Retrieves all queens for a specific franchise and season.
+// Doc: Args: req (Request) - Express request object with query parameters franchise (string) and season (number), res (Response) - Express response object
+// Doc: Route: Likely GET /queens?franchise=US&season=16
 export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
     const franchiseParam = req.query.franchise;
     const seasonParam = req.query.season;
@@ -91,7 +98,9 @@ export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
 };
 
 
-// POST //
+// Doc: Adds a new queen record to the database.
+// Doc: Args: req (Request) - Express request object with body containing {name: string, franchise: string, season: number, status: QueenStatus, location?: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /queens
 export const addNewQueen = async (req: Request, res: Response) => {
     const {name, franchise, season, status, location} = req.body as INTERFACES.QueenInput;
     let loc: string = '';
@@ -109,6 +118,9 @@ export const addNewQueen = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Adds multiple queen records to the database in bulk.
+// Doc: Args: req (Request) - Express request object with body containing array of {name: string, franchise: string, season: number, status: QueenStatus, location?: string}[], res (Response) - Express response object
+// Doc: Route: Likely POST /queens/bulk
 export const addNewQueens = async (req: Request, res: Response) => {
     const queensData = req.body as INTERFACES.QueenInput[];
 
@@ -127,6 +139,9 @@ export const addNewQueens = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Updates a queen's status (e.g., ACTIVE, ELIMINATED, WINNER).
+// Doc: Args: req (Request) - Express request object with body containing {name: string, franchise: string, season: number, status: QueenStatus}, res (Response) - Express response object
+// Doc: Route: Likely PUT /queens/status or PATCH /queens/status
 export const updateQueenStatus = async (req: Request, res: Response) => {
     const {name, franchise, season, status} = req.body;
     try {
@@ -141,6 +156,9 @@ export const updateQueenStatus = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Retrieves a queen's ID by franchise, season, and name.
+// Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, name: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /queens/id or GET /queens/id
 export const getQueenId = async (req: Request, res: Response) => {
     const {franchise, season, name} = req.body;
 

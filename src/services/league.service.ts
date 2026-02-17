@@ -1,7 +1,9 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
-// returns specific league by name // 
+// Doc: Queries the database for a specific league by name, franchise, and season.
+// Doc: Args: leaguename (string) - The league name, franchise (string) - The franchise name, season (number) - The season number
+// Doc: Returns: Promise<League | null> - The league record or null if not found
 export const getLeague = (leaguename: string, franchise: string, season: number) => {
     logger.debug('League.Service.ts: getting league with leaguename: ', {leagueName: leaguename, franchise: franchise, season: season});
     return prisma.league.findUnique({
@@ -13,7 +15,10 @@ export const getLeague = (leaguename: string, franchise: string, season: number)
     });  
 };
 
-const makeNewRoster = async (leagueName: string, franchise: string, season: number, 
+// Doc: Helper function that creates a new roster record in the database.
+// Doc: Args: leagueName (string) - League name, franchise (string) - Franchise name, season (number) - Season number, teamName (string) - Team name, email (string) - User email, queens (string[]) - Array of queen names
+// Doc: Returns: Promise<Roster> - The created roster record
+const makeNewRoster = async (leagueName: string, franchise: string, season: number,
     teamName: string, email: string, queens: string[]
 ) => {
     return await prisma.roster.create({
@@ -29,18 +34,21 @@ const makeNewRoster = async (leagueName: string, franchise: string, season: numb
     });
 };
 
-// returns records of all the leagues // 
+// Doc: Queries the database for all league records.
+// Doc: Args: None
+// Doc: Returns: Promise<League[]> - Array of all league records
 export const getAllLeagues = () => {
     logger.debug('League.Service.ts: loading all league records');
     return prisma.league.findMany();
 };
 
-// creates a league in the database // 
-export const createLeague = (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number, teamName: string, queens: string[]) => {
-    // TODO: make sure league name is unique //
+// Doc: Creates a new league in the database and creates a roster for the owner.
+// Doc: Args: leaguename (string) - League name, owner (string) - Owner email, users (Array<string>) - Array of user emails, maxPlayers (number) - Max players allowed, maxQueensPerTeam (number) - Max queens per team, franchise (string) - Franchise name, season (number) - Season number, teamName (string) - Owner's team name, queens (string[]) - Owner's selected queens
+// Doc: Returns: Promise<League | null> - The created league record or null on failure
+export const createLeague = async (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number, teamName: string, queens: string[]) => {
     logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
-    
-    const newLeague = prisma.league.create({
+
+    const newLeague = await prisma.league.create({
         data: {
             leagueName: leaguename,
             owner: owner,
@@ -57,13 +65,18 @@ export const createLeague = (leaguename: string, owner: string, users: Array<str
         return null;
     }
 
-    const newRoster = makeNewRoster(leaguename, franchise, season, teamName, owner, queens);
+    const newRoster = await makeNewRoster(leaguename, franchise, season, teamName, owner, queens);
     if(!newRoster) {
         logger.error('League.Service.ts: createLeague failed to make roster for ', {leaguename: leaguename, email: owner});
         return null;
     }
+
+    return newLeague;
 };
 
+// Doc: Queries the database for all leagues where the user is a member.
+// Doc: Args: email (string) - The user's email address
+// Doc: Returns: Promise<League[]> - Array of leagues the user is part of (returns id, leagueName, franchise, season)
 export const getLeaguesByUser = (email: string) => {
     return prisma.league.findMany({
         where: {
@@ -80,8 +93,9 @@ export const getLeaguesByUser = (email: string) => {
     });
 };
 
-// gets all leagues where length(users) < maxPlayers //
-// AKA: what leagues can take on more players //
+// Doc: Queries all leagues and filters for those with available spots (users.length < maxPlayers).
+// Doc: Args: None
+// Doc: Returns: Promise<League[]> - Array of leagues that can accept more players
 export const getAvailableLeagues = async () => {
     logger.debug('League.Service.ts: about to get all leagues', {});
 
@@ -104,6 +118,9 @@ export const getAvailableLeagues = async () => {
     return availableLeagues;
 };
 
+// Doc: Queries leagues by franchise and season, then filters for those with available spots.
+// Doc: Args: franchise (string) - The franchise name, season (number) - The season number
+// Doc: Returns: Promise<League[]> - Array of available leagues matching franchise and season
 export const getAvailByFranAndSeason = async (franchise: string, season: number) => {
     const allLeagues = await prisma.league.findMany({
         where: {

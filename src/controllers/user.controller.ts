@@ -6,7 +6,9 @@ import * as notificationService from '../services/notification.service';
 import logger from "../util/LoggerImpl";
 import { UserTokenPayload } from "../types/Interfaces";
 
-// returns all users //
+// Doc: Retrieves all user records from the database.
+// Doc: Args: req (Request) - Express request object, res (Response) - Express response object
+// Doc: Route: Likely GET /users
 export const getUsers = async (req: Request, res: Response) => {
     const users = await userService.getUsers();
     if(!users) {
@@ -17,6 +19,9 @@ export const getUsers = async (req: Request, res: Response) => {
     res.json(users);
 };
 
+// Doc: Retrieves all user email addresses from the database.
+// Doc: Args: req (Request) - Express request object, res (Response) - Express response object
+// Doc: Route: Likely GET /users/emails
 export const getAllEmails = async (req: Request, res: Response) => {
     const emails = await userService.getAllEmails();
     if(emails) {
@@ -28,7 +33,9 @@ export const getAllEmails = async (req: Request, res: Response) => {
     }
 };
 
-// could override the Request here with a custom CreateRequest to make the code cleaner. //
+// Doc: Creates a new user account with hashed password and returns user data with JWT token.
+// Doc: Args: req (Request) - Express request object with body containing {email: string, password: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /users/register or POST /users
 export const createUser = async (req: Request, res: Response) => {
     const {email, password} = req.body;
     logger.debug('User.Controller.ts: createUser() called with email: ', {email:email, password:password});
@@ -56,7 +63,9 @@ export const createUser = async (req: Request, res: Response) => {
     }
 };
 
-// loads user record by name //
+// Doc: Retrieves a specific user's record by email address.
+// Doc: Args: req (Request) - Express request object with query parameter email (string), res (Response) - Express response object
+// Doc: Route: Likely GET /users/record?email=user@example.com
 export const getUserRecord = async (req: Request, res: Response) => {
     const email = req.query.email as string | undefined;
     if(!email) {
@@ -74,38 +83,59 @@ export const getUserRecord = async (req: Request, res: Response) => {
 };
 
 
-// authenticate user //
+// Doc: Authenticates a user by verifying email and password, returns JWT token on success.
+// Doc: Args: req (Request) - Express request object with body containing {email: string, password: string}, res (Response) - Express response object
+// Doc: Route: Likely POST /users/login or POST /users/auth
 export const authenticateUser = async (req: Request, res: Response) => {
     const {email, password} = req.body;
-    logger.debug("User.Controller.ts: authenticateUser() for : ", {username: email});
+    const clientIP = req.ip || req.connection.remoteAddress;
+
+    logger.info("User.Controller: authenticateUser() - Authentication attempt initiated", {email, clientIP});
+
+    // Validate input
+    if(!email || !password) {
+        logger.error('User.Controller: authenticateUser() - Missing email or password in request', {email: email, hasPassword: !!password});
+        return res.status(400).json({Error: "Email and password are required"});
+    }
+
     try {
+        logger.debug('User.Controller: authenticateUser() - Fetching user record from database', {email});
         const userRecord = await userService.getUserByName(email);
+
         if(!userRecord) {
-            logger.error('User.Controller.ts: User record not found for user, returning 404, user: ', {email:email});
+            logger.error('User.Controller: authenticateUser() - Authentication failed: User not found', {email, clientIP});
             return res.status(404).json({Error: "User not found"});
         }
-        logger.debug('User.Controller.ts: found user record');
+
+        logger.debug('User.Controller: authenticateUser() - User found, verifying password', {email, userId: userRecord.id});
         const passwordsDoMatch = await passwordManager.comparePassword(password, userRecord.password);
+
         if(!passwordsDoMatch) {
-            logger.debug('User.Controller.ts: Passwords dont match, returning 404.');
-            return res.status(404).json({Error: "Invalid Password"});
+            logger.error('User.Controller: authenticateUser() - Authentication failed: Invalid password', {email, userId: userRecord.id, clientIP});
+            return res.status(401).json({Error: "Invalid Password"});
         }
-        logger.debug('User.Controller.ts: Login successful for user: ', {email: email});
+
+        logger.info('User.Controller: authenticateUser() - Authentication successful, generating token', {email, userId: userRecord.id});
 
         let userTokenPayload: UserTokenPayload = {id: userRecord.id, email: userRecord.email};
         const token = tokenManager.generateToken(userTokenPayload);
-        // TODO: reformat this response, will require UI change //
-        return res.status(201).json({
-            status: "Login Successful", 
+
+        logger.info('User.Controller: authenticateUser() - Login successful, token issued', {email, userId: userRecord.id, clientIP});
+
+        return res.status(200).json({
+            status: "Login Successful",
             email: email,
             token: token
         });
     } catch(error) {
-        logger.error('User.Controller.ts: error processing authentication.', {error: error});
+        logger.error('User.Controller: authenticateUser() - Unexpected error during authentication', {email, error: error, clientIP});
         res.status(500).json({Error: "Server Error"});
     }
-}; // authenticate user //
+};
 
+// Doc: Updates a user's password after verifying the old password, creates a notification.
+// Doc: Args: req (Request) - Express request object with body containing {email: string, oldPassword: string, newPassword: string}, res (Response) - Express response object
+// Doc: Route: Likely PUT /users/password or PATCH /users/password
 export const updatePassword = async (req: Request, res: Response) => {
     const {email, oldPassword, newPassword} = req.body;
 
