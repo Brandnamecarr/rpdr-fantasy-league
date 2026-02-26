@@ -8,14 +8,17 @@ import { QueenStatus } from "@prisma/client";
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
 // Doc: Route: Likely GET /queens
 export const getAllQueens = async (req: Request, res: Response) => {
+    logger.debug('Queen.Controller.ts: getAllQueens() - request received');
     try {
         let queens = await queenService.getAllQueens();
         if(!queens) {
+            logger.error('Queen.Controller.ts: getAllQueens() - no queens returned from service');
             return res.status(404).json({Error: "Error fetching all queens"});
         }
+        logger.debug('Queen.Controller.ts: getAllQueens() - returning queen records', {count: queens.length});
         res.status(201).json({queens});
     } catch(error) {
-        logger.error('Queen.Controller.ts: Error getting all queens: ', {error: error});
+        logger.error('Queen.Controller.ts: getAllQueens() - unexpected error', {error: error});
         res.status(500).json({Error: error});
     }
 };
@@ -25,19 +28,23 @@ export const getAllQueens = async (req: Request, res: Response) => {
 // Doc: Route: Likely GET /queens/name?name=QueenName
 export const getQueenByName = async (req: Request, res: Response) => {
     const name = req.query.name as string | undefined;
+    logger.debug('Queen.Controller.ts: getQueenByName() - request received', {name});
 
     if(!name) {
+        logger.error('Queen.Controller.ts: getQueenByName() - missing required query param: name');
         return res.status(400).json({Error: 'Name is required'});
     }
 
     try {
         let queenRecord = await queenService.getQueenByName(name);
         if(!queenRecord) {
+            logger.error('Queen.Controller.ts: getQueenByName() - no records found for name', {name});
             return res.status(404).json({Error: `Error getting records for ${name}`});
         }
+        logger.debug('Queen.Controller.ts: getQueenByName() - returning records', {name, count: queenRecord.length});
         res.status(201).json(queenRecord);
     } catch(error) {
-        logger.error("Queen.Controller.ts: Error getting Queen by name: ", {Error: error});
+        logger.error("Queen.Controller.ts: getQueenByName() - unexpected error", {name, error});
         res.status(500).json({Error: 'Error getting Queen by name'});
     }
 };
@@ -54,17 +61,23 @@ export const getQueenStatus = async(req:Request, res: Response) => {
     const season: number = Number(seasonParam) || -1;
     const name: string = String(nameParam) || '';
 
+    logger.debug('Queen.Controller.ts: getQueenStatus() - request received', {franchise, season, name});
+
     if(franchise === '' || name === '' || season === -1) {
+        logger.error('Queen.Controller.ts: getQueenStatus() - invalid query params', {franchise, season, name});
         return res.status(404).json({Error: `Got bad args in query ${franchiseParam}, ${seasonParam}, ${nameParam}`});
     }
 
     try {
         const queen = await queenService.getQueenStatus(franchise, season, name);
         if(!queen) {
+            logger.error('Queen.Controller.ts: getQueenStatus() - no queen found matching params', {franchise, season, name});
             return res.status(404).json({Error: "No queen found matching params"});
         }
+        logger.debug('Queen.Controller.ts: getQueenStatus() - returning queen record', {franchise, season, name});
         res.status(201).json(queen);
     } catch(erorr) {
+        logger.error('Queen.Controller.ts: getQueenStatus() - unexpected error', {franchise, season, name, error: erorr});
         res.status(500).json({Error: "Error with getQueenStatus()"});
     }
 };
@@ -103,6 +116,7 @@ export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
 // Doc: Route: Likely POST /queens
 export const addNewQueen = async (req: Request, res: Response) => {
     const {name, franchise, season, status, location} = req.body as INTERFACES.QueenInput;
+    logger.debug('Queen.Controller.ts: addNewQueen() - request received', {name, franchise, season, status, location});
     let loc: string = '';
     if(!location) {
         loc = "UNKNOWN";
@@ -110,10 +124,13 @@ export const addNewQueen = async (req: Request, res: Response) => {
     try {
         const response = await queenService.addNewQueen(name, franchise, season, location, status);
         if(!response) {
+            logger.error('Queen.Controller.ts: addNewQueen() - service returned null', {name, franchise, season});
             return res.status(404).json({Error: "Unable to make queen matching params"});
         }
+        logger.info('Queen.Controller.ts: addNewQueen() - queen created successfully', {name, franchise, season});
         return res.status(201).json(response);
     } catch(error) {
+        logger.error('Queen.Controller.ts: addNewQueen() - unexpected error', {name, franchise, season, error});
         res.status(500).json({Error: "Unable to insert queen into table"});
     }
 };
@@ -123,18 +140,23 @@ export const addNewQueen = async (req: Request, res: Response) => {
 // Doc: Route: Likely POST /queens/bulk
 export const addNewQueens = async (req: Request, res: Response) => {
     const queensData = req.body as INTERFACES.QueenInput[];
+    logger.debug('Queen.Controller.ts: addNewQueens() - bulk insert request received', {count: Array.isArray(queensData) ? queensData.length : 'invalid'});
 
     if(!Array.isArray(queensData) || queensData.length == 0) {
+        logger.error('Queen.Controller.ts: addNewQueens() - invalid or empty input array');
         return res.status(404).json({Error: "Error with queensData input"});
     }
 
     try {
         let response = await queenService.addNewQueens(queensData);
         if(!response) {
+            logger.error('Queen.Controller.ts: addNewQueens() - service returned null', {count: queensData.length});
             return res.status(404).json({Error: "Error adding list of Queens to Queen table"});
         }
+        logger.info('Queen.Controller.ts: addNewQueens() - bulk insert complete', {inserted: response.count});
         res.status(201).json(response);
     } catch(error) {
+        logger.error('Queen.Controller.ts: addNewQueens() - unexpected error', {count: queensData.length, error});
         res.status(500).json({Error: "Error inserting list of quenes"});
     }
 };
@@ -144,14 +166,17 @@ export const addNewQueens = async (req: Request, res: Response) => {
 // Doc: Route: Likely PUT /queens/status or PATCH /queens/status
 export const updateQueenStatus = async (req: Request, res: Response) => {
     const {name, franchise, season, status} = req.body;
+    logger.info('Queen.Controller.ts: updateQueenStatus() - request received', {name, franchise, season, newStatus: status});
     try {
         let response = await queenService.updateQueenStatus(name, franchise, season, status);
-        logger.info(`Queen.Controller.Ts: updateQueenStatus() -> response is ${response}`);
         if(!response) {
+            logger.error('Queen.Controller.ts: updateQueenStatus() - service returned null', {name, franchise, season, status});
             return res.status(404).json({Error: `Error updating queen ${name} status to ${status}`});
         }
+        logger.info('Queen.Controller.ts: updateQueenStatus() - status updated successfully', {name, franchise, season, status, updatedCount: response.count});
         res.status(201).json(response);
     } catch(error) {
+        logger.error('Queen.Controller.ts: updateQueenStatus() - unexpected error', {name, franchise, season, status, error});
         res.status(500).json({Error: `Error updating queen ${name} status`});
     }
 };

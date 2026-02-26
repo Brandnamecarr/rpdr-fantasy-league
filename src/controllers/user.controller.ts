@@ -139,25 +139,31 @@ export const authenticateUser = async (req: Request, res: Response) => {
 export const updatePassword = async (req: Request, res: Response) => {
     const {email, oldPassword, newPassword} = req.body;
 
-    logger.debug(`User.Controller.ts: Updating Password for user ${email}`);
+    logger.info('User.Controller.ts: updatePassword() - request received', {email});
     const userRecord = await userService.getUserByName(email);
     if(!userRecord) {
+        logger.error('User.Controller.ts: updatePassword() - user not found in database', {email});
         return res.status(404).json({Error: `User ${email} not found in database`});
     }
+    logger.debug('User.Controller.ts: updatePassword() - verifying old password', {email});
     const passwordsDoMatch = await passwordManager.comparePassword(oldPassword, userRecord.password);
     if(!passwordsDoMatch) {
+        logger.error('User.Controller.ts: updatePassword() - old password does not match', {email});
         return res.status(404).json({Error: `Password for ${email} does not match records`});
     }
+    logger.debug('User.Controller.ts: updatePassword() - old password verified, hashing new password', {email});
     const newHashedPw = await passwordManager.hashPassword(newPassword);
     try {
         let response = await userService.updatePassword(email, newHashedPw);
         if(!response) {
+            logger.error('User.Controller.ts: updatePassword() - service returned null', {email});
             return res.status(500).json({Error: `Failed to update password for ${email}`});
         }
         let tempNotif = notificationService.makeNewNotification("SERVER", userRecord.email, "Your password has been updated");
+        logger.info('User.Controller.ts: updatePassword() - password updated successfully', {email});
         return res.status(201).json({Message: `Successfully updated password for ${email}`});
     } catch(error) {
-        logger.error('User.Controller.ts: Error in updatePassword: ', {error: error});
+        logger.error('User.Controller.ts: updatePassword() - unexpected error', {email, error});
         return res.status(500).json({Error: `Error updating password for ${email}`});
     }
 };

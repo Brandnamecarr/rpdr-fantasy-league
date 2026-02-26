@@ -7,6 +7,7 @@ import { ActivityStatus } from "@prisma/client";
 // Doc: Args: None
 // Doc: Returns: Promise<ActiveSeasons[]> - Array of active season records
 export const getActiveSeasons = () => {
+    logger.debug('ActiveSeasons.Service.ts: getActiveSeasons() - fetching all ACTIVE seasons');
     return prisma.activeSeasons.findMany({
         where: {
             activityStatus: 'ACTIVE',
@@ -18,6 +19,7 @@ export const getActiveSeasons = () => {
 // Doc: Args: None
 // Doc: Returns: Promise<ActiveSeasons[]> - Array of all season records
 export const getAllSeasons = () => {
+    logger.debug('ActiveSeasons.Service.ts: getAllSeasons() - fetching all season records');
     return prisma.activeSeasons.findMany();
 };
 
@@ -25,6 +27,7 @@ export const getAllSeasons = () => {
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number
 // Doc: Returns: Promise<ActiveSeasons> - The created season record
 export const addSeason = (franchise: string, season: number) => {
+    logger.info('ActiveSeasons.Service.ts: addSeason() - creating new season record', {franchise, season});
     return prisma.activeSeasons.create({
         data: {
             franchise: franchise,
@@ -37,6 +40,7 @@ export const addSeason = (franchise: string, season: number) => {
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number, status (ActivityStatus) - The new activity status
 // Doc: Returns: Promise<ActiveSeasons> - The updated season record
 export const updateSeason = async (franchise: string, season: number, status: ActivityStatus) => {
+    logger.info('ActiveSeasons.Service.ts: updateSeason() - updating season status', {franchise, season, newStatus: status});
     return await prisma.activeSeasons.update({
         where: {
             franchise_season: {

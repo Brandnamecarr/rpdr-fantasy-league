@@ -23,13 +23,14 @@ export const getUserNotifs = async (req: Request, res: Response) => {
 // Doc: Route: Likely POST /notifications/active or GET /notifications/active
 export const getAllActiveNotifs = async (req: Request, res: Response) => {
     const {email} = req.body;
+    logger.debug('Notification.Controller.ts: getAllActiveNotifs() - request received', {email});
 
     try {
-        let response = notifService.getAllActiveNotifs(email);
-        logger.debug('notification.controller.ts: got list of active notifs: ', {notifs: response});
+        let response = await notifService.getAllActiveNotifs(email);
+        logger.debug('Notification.Controller.ts: getAllActiveNotifs() - returning active notifications', {email, count: response?.length});
         res.status(201).json(response);
     } catch(error) {
-        logger.error('notification.controller.ts: error retrieving notifications: ', {error: error});
+        logger.error('Notification.Controller.ts: getAllActiveNotifs() - unexpected error', {email, error});
         res.status(500).json({error: error});
     }
 };

@@ -10,6 +10,7 @@ import {League, User, Roster} from '@prisma/client';
 // Doc: Route: Likely POST /league-ops/weekly-update
 export const weeklyUpdate = async (req: Request, res: Response) => {
     const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
+    logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, maxiWinner, isSnatchGame, eliminated});
 
     try {
         const resp = await leagueOpsService.weeklyUpdate(franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
@@ -30,6 +31,7 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
 // Doc: Route: Likely POST /league-ops/weekly-survey
 export const weeklySurvey = async (req: Request, res: Response) => {
     const {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek} = req.body;
+    logger.info('LeagueOps.Controller.ts: weeklySurvey() - request received', {tootCount: toots?.length, bootCount: boots?.length, queenOfTheWeek});
 
     try {
         let resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
@@ -76,18 +78,22 @@ export const addUserToLeague = async (req: Request, res: Response) => {
 // Doc: Route: Likely DELETE /league-ops/remove-user or POST /league-ops/remove-user
 export const removeUserFromLeague = async (req: Request, res: Response) => {
     const {email, leagueName, franchise, season} = req.body;
+    logger.info('LeagueOps.Controller.ts: removeUserFromLeague() - request received', {email, leagueName, franchise, season});
     try {
         const result = await leagueService.getLeague(leagueName, franchise, season);
         if(!result) {
+            logger.error('LeagueOps.Controller.ts: removeUserFromLeague() - league not found', {leagueName, franchise, season});
             return res.status(404).json({
                 "Error": "League not found in database"
             });
         } //if //
         let league:League = result;
+        logger.debug('LeagueOps.Controller.ts: removeUserFromLeague() - found league, calling service', {leagueName: league.leagueName, email});
         const resp = await leagueOpsService.removeUserFromLeague(email, league);
+        logger.info('LeagueOps.Controller.ts: removeUserFromLeague() - completed successfully', {email, leagueName});
         res.status(200).json(resp);
     } catch (error) {
-        logger.error('LeagueOps.Controller.ts: error in removeUserFromLeague(): ', {error: error});
+        logger.error('LeagueOps.Controller.ts: removeUserFromLeague() - unexpected error', {email, leagueName, error});
         res.status(500).json({error: 'Unable to remove user from league'});
     }
 };
@@ -122,14 +128,17 @@ export const getAllRostersByLeague = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
 // Doc: Route: Likely GET /league-ops/rosters
 export const getAllRosters = async (req: Request, res: Response) => {
+    logger.debug('LeagueOps.Controller.ts: getAllRosters() - request received');
     try {
         let response = await leagueOpsService.getAllRosters();
         if(!response) {
+            logger.error('LeagueOps.Controller.ts: getAllRosters() - no rosters returned from service');
             res.status(404).json({"Error": "No rosters found in database"});
         }
+        logger.debug('LeagueOps.Controller.ts: getAllRosters() - returning all rosters', {count: response?.length});
         res.status(201).json(response);
     } catch (error) {
-        logger.error('LeagueOps.Controller.ts: Error in getAllRosters: ', {error: error});
+        logger.error('LeagueOps.Controller.ts: getAllRosters() - unexpected error', {error: error});
         res.status(500).json({error: error});
     }
 };

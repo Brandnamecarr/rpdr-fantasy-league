@@ -21,6 +21,7 @@ export const getLeague = (leaguename: string, franchise: string, season: number)
 const makeNewRoster = async (leagueName: string, franchise: string, season: number,
     teamName: string, email: string, queens: string[]
 ) => {
+    logger.debug('League.Service.ts: makeNewRoster() - creating owner roster record', {leagueName, franchise, season, teamName, email, queensCount: queens.length});
     return await prisma.roster.create({
         data: {
             leagueName:leagueName,
@@ -71,6 +72,7 @@ export const createLeague = async (leaguename: string, owner: string, users: Arr
         return null;
     }
 
+    logger.info('League.Service.ts: createLeague() - league and owner roster created successfully', {leaguename, owner, franchise, season});
     return newLeague;
 };
 
@@ -78,6 +80,7 @@ export const createLeague = async (leaguename: string, owner: string, users: Arr
 // Doc: Args: email (string) - The user's email address
 // Doc: Returns: Promise<League[]> - Array of leagues the user is part of (returns id, leagueName, franchise, season)
 export const getLeaguesByUser = (email: string) => {
+    logger.debug('League.Service.ts: getLeaguesByUser() - fetching leagues for user', {email});
     return prisma.league.findMany({
         where: {
             users: {
@@ -114,7 +117,8 @@ export const getAvailableLeagues = async () => {
     const availableLeagues = allLeagues.filter(league => {
         return league.users.length < league.maxPlayers;
     });
-    
+
+    logger.debug('League.Service.ts: getAvailableLeagues() - filtered available leagues', {total: allLeagues.length, available: availableLeagues.length});
     return availableLeagues;
 };
 
@@ -122,6 +126,7 @@ export const getAvailableLeagues = async () => {
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number
 // Doc: Returns: Promise<League[]> - Array of available leagues matching franchise and season
 export const getAvailByFranAndSeason = async (franchise: string, season: number) => {
+    logger.debug('League.Service.ts: getAvailByFranAndSeason() - fetching available leagues', {franchise, season});
     const allLeagues = await prisma.league.findMany({
         where: {
             franchise: franchise,
@@ -133,5 +138,6 @@ export const getAvailByFranAndSeason = async (franchise: string, season: number)
         return league.users.length < league.maxPlayers;
     });
 
+    logger.debug('League.Service.ts: getAvailByFranAndSeason() - filtered results', {franchise, season, total: allLeagues.length, available: availableLeagues.length});
     return availableLeagues;
 };

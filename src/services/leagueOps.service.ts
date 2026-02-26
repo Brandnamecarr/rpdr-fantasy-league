@@ -13,6 +13,7 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
     topQueens: string[], safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[],
     eliminated: string[]
     ) => {
+        logger.debug('LeagueOps.Service.ts: weeklyUpdateObjectHelper() - building score map', {maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated});
         // make update obj //
         let weeklyQueenScores: Record<string, number> = {};
 
@@ -40,6 +41,7 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
             weeklyQueenScores[q] = (weeklyQueenScores[q] || 0) + PointManipulation.WINS_LIPSYNCH;
         });
 
+        logger.debug('LeagueOps.Service.ts: weeklyUpdateObjectHelper() - score map built', {scoredQueens: Object.keys(weeklyQueenScores).length});
         return weeklyQueenScores;
     };
 
@@ -48,7 +50,8 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
 // Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
 export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[],
     safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[]) => {
-        
+        logger.info('LeagueOps.Service.ts: weeklyUpdate() - processing weekly episode results', {franchise, season, maxiWinner, isSnatchGame, eliminated});
+
         // make weeklyQueenUpdateScores object:
         let weeklyQueenScores = weeklyUpdateObjectHelper(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated);
         if(!weeklyQueenScores) {
@@ -61,9 +64,10 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
             let rosters = await getRostersByFranchiseAndLeague(franchise, season);
 
             if(!rosters) {
-                logger.error('LeagueOps.Service.ts: rosters cant be null', {error: "weeklyUpdate error"});
+                logger.error('LeagueOps.Service.ts: weeklyUpdate() - no rosters found for franchise/season', {franchise, season});
                 return null;
             }
+            logger.debug('LeagueOps.Service.ts: weeklyUpdate() - loaded rosters to update', {rosterCount: rosters.length, franchise, season});
 
             // 2. Iterate through the records and then update them...
             const updatePromises = rosters.map((roster) => {
@@ -96,7 +100,7 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
             return results;
         
         } catch (error) {
-          logger.info(`LeagueOps.Service.ts: failed to update records in weeklyUpdate(): `, {error: error});
+          logger.error(`LeagueOps.Service.ts: weeklyUpdate() - transaction failed`, {franchise, season, error});
           return null;
         }
 };
@@ -105,6 +109,7 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
 // Doc: Args: toots (string[]) - Queens with good runways, boots (string[]) - Queens with bad runways, iconicQueens (string[]) - Queens with iconic moments, cringeQueens (string[]) - Queens with cringe moments, queenOfTheWeek (string[]) - Queen(s) of the week
 // Doc: Returns: Record<string, number> - Object mapping queen names to their point adjustments
 const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]) => {
+    logger.debug('LeagueOps.Service.ts: weeklySurveyObjectHelper() - building survey score map', {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek});
     let update: Record<string, number> = {};
 
     toots.forEach(q => update[q] = PointManipulation.GOOD_RUNWAY);
@@ -137,6 +142,7 @@ const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens
             update[q] = WeeklyBonusPoints.LEAGUE_QUEEN_OF_WEEK;
         }
     }); // queenOfTheWeek //
+    logger.debug('LeagueOps.Service.ts: weeklySurveyObjectHelper() - survey score map built', {scoredQueens: Object.keys(update).length});
     return update;
 };
 
@@ -144,6 +150,7 @@ const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens
 // Doc: Args: toots (string[]) - Queens with good runways, boots (string[]) - Queens with bad runways, iconicQueens (string[]) - Queens with iconic moments, cringeQueens (string[]) - Queens with cringe moments, queenOfTheWeek (string[]) - Queen(s) of the week
 // Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
 export const weeklySurvey = async (toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]) => {
+    logger.info('LeagueOps.Service.ts: weeklySurvey() - processing weekly survey results', {tootCount: toots.length, bootCount: boots.length, queenOfTheWeek});
     //1. Do point adjustments //
     let weeklySurveyUpdate = weeklySurveyObjectHelper(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
     if(!weeklySurveyUpdate) {
@@ -155,9 +162,10 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
     try {
         let rosters = await getAllRosters();
         if(!rosters) {
-            logger.error("LeagueOps.Service.ts: rosters can't be null!", {error: "weeklySurvey error"});
+            logger.error("LeagueOps.Service.ts: weeklySurvey() - failed to load rosters from database");
             return null;
         }
+        logger.debug('LeagueOps.Service.ts: weeklySurvey() - loaded rosters for survey update', {rosterCount: rosters.length});
         // 3. Handle updates //
         const updatePromises = rosters.map((roster) => {
             // Calculate how many points this specific user earned this week
@@ -255,6 +263,7 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
 // Doc: Args: email (string) - User email to remove, league (League) - League object to remove user from
 // Doc: Returns: Promise<void> - TODO: Should also remove the roster record
 export const removeUserFromLeague = async (email: string, league: League) => {
+    logger.info('LeagueOps.Service.ts: removeUserFromLeague() - attempting to remove user', {email, leagueName: league.leagueName});
     // 1. Check that the player is in the user list
     let isInUsers: boolean = league.users.includes(email);
 
@@ -271,9 +280,12 @@ export const removeUserFromLeague = async (email: string, league: League) => {
             },
             data: updatePayload,
         });
+        logger.info('LeagueOps.Service.ts: removeUserFromLeague() - user removed from league users array', {email, leagueName: league.leagueName});
 
-        // 4. Remove the corresponding record from the records table too 
-        // TODO. 
+        // 4. Remove the corresponding record from the records table too
+        // TODO.
+    } else {
+        logger.error('LeagueOps.Service.ts: removeUserFromLeague() - user not found in league users array', {email, leagueName: league.leagueName});
     }
 };
 
@@ -281,7 +293,7 @@ export const removeUserFromLeague = async (email: string, league: League) => {
 // Doc: Args: leagueName (string) - League name, email (string) - User email, teamName (string) - Team name, queens (string[]) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
 // Doc: Returns: null - Not yet implemented
 export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[], franchise: string, season: number) => {
-    console.log('TODO: addNewRoster');
+    logger.error('LeagueOps.Service.ts: addNewRoster() - not yet implemented', {leagueName, email, teamName, franchise, season});
     return null;
 };
 
@@ -289,6 +301,7 @@ export const addNewRoster = (leagueName: string, email: string, teamName: string
 // Doc: Args: leagueName (string) - The league name to filter by
 // Doc: Returns: Promise<Roster[]> - Array of roster records for the specified league
 export const getAllRostersByLeague = (leagueName: string) => {
+    logger.debug('LeagueOps.Service.ts: getAllRostersByLeague() - fetching rosters for league', {leagueName});
     return prisma.roster.findMany({
         where: {
             leagueName: leagueName,
@@ -300,6 +313,7 @@ export const getAllRostersByLeague = (leagueName: string) => {
 // Doc: Args: None
 // Doc: Returns: Promise<Roster[]> - Array of all roster records
 export const getAllRosters = () => {
+    logger.debug('LeagueOps.Service.ts: getAllRosters() - fetching all roster records');
     return prisma.roster.findMany();
 };
 
@@ -307,6 +321,7 @@ export const getAllRosters = () => {
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number
 // Doc: Returns: Promise<Roster[]> - Array of roster records matching franchise and season
 export const getRostersByFranchiseAndLeague = (franchise: string, season: number) => {
+    logger.debug('LeagueOps.Service.ts: getRostersByFranchiseAndLeague() - fetching rosters', {franchise, season});
     return prisma.roster.findMany({
         where: {
             franchise: franchise,
