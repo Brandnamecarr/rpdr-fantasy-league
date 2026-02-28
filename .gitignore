@@ -12,3 +12,5 @@ test/BIT.log
 
 logs/*
 logs/app.log
+
+.env

@@ -33,6 +33,15 @@ export enum LeaguePointAwards {
     FAN_FAVORITE = 10
 } // LeaguePointAwards Enum//
 
+// Doc: Point values awarded/deducted based on fan survey vote winners (plurality-wins per category)
+export enum FanSurveyPoints {
+    QUEEN_OF_WEEK   =  10,  // most fan votes for queen of the week
+    BOTTOM_OF_WEEK  =  -5,  // most fan votes for worst of the week
+    LIP_SYNC_WINNER =  20,  // most fan votes for lip sync winner
+    BEST_DRESSED    =  20,  // most fan votes for best runway look
+    WORST_DRESSED   =  -5   // most fan votes for worst runway look
+} // FanSurveyPoints Enum //
+
 // export enum QueenStatus {
 //     ACTIVE,
 //     ELIMINATED,

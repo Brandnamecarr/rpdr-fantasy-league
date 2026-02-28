@@ -79,3 +79,19 @@ model ActiveSeasons {
 
   @@unique([franchise, season])
 }
+
+model FanSurveyResponse {
+  id              Int      @id @default(autoincrement())
+  franchise       String
+  season          Int
+  episode         Int
+  submittedBy     String
+  queenOfTheWeek  String
+  bottomOfTheWeek String
+  lipSyncWinner   String
+  bestDressed     String
+  worstDressed    String
+  createdAt       DateTime @default(now())
+
+  @@unique([franchise, season, episode, submittedBy])
+}

@@ -100,6 +100,24 @@ export const getAvailableLeagues = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Fetches all leagues a user is in whose franchise/season combo is INACTIVE in ActiveSeasons.
+// Doc: Args: req (Request) - Express request with query param email (string), res (Response) - Express response object
+// Doc: Route: GET /league/inactiveUserLeagues?email=user@example.com
+export const getInactiveLeaguesByUser = async (req: Request, res: Response) => {
+    const email = req?.query?.email as string || undefined;
+    if (!email) {
+        logger.error("League.Controller.ts: email not in getInactiveLeaguesByUser query");
+        return res.status(400).json({ Error: "Email required in query params." });
+    }
+    try {
+        const response = await leagueService.getInactiveLeaguesByUser(email);
+        return res.status(200).json(response);
+    } catch (error) {
+        logger.error('League.Controller.ts: error in getInactiveLeaguesByUser(): ', { error });
+        res.status(500).json({ Error: `Error completing getInactiveLeaguesByUser for ${email}` });
+    }
+};
+
 // Doc: Fetches available leagues filtered by specific franchise and season.
 // Doc: Args: req (Request) - Express request object with query parameters franchise (string) and season (number), res (Response) - Express response object
 // Doc: Route: Likely GET /leagues/available?franchise=US&season=16

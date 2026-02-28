@@ -13,6 +13,8 @@ router.use(protect);
 router.get("/getAllLeagues", leagueController.getAllLeagues);
 // Doc: GET /league/allUserLeagues?email=user@example.com - Retrieves all leagues for a specific user
 router.get("/allUserLeagues", leagueController.getLeaguesByUser);
+// Doc: GET /league/inactiveUserLeagues?email=user@example.com - Retrieves leagues the user is in that belong to INACTIVE seasons
+router.get("/inactiveUserLeagues", leagueController.getInactiveLeaguesByUser);
 // Doc: GET /league/getAvailableLeagues - Retrieves leagues with available spots
 router.get("/getAvailableLeagues", leagueController.getAvailableLeagues);
 // Doc: GET /league/getAvailableByFranAndSeason?franchise=US&season=16 - Retrieves available leagues by franchise and season

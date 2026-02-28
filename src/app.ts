@@ -16,14 +16,25 @@ import activeSeasonRoutes from './routes/activeSeasons.routes';
 
 // Doc: Express app instance with middleware configuration
 const app = express();
-// Doc: CORS configuration allowing requests from frontend at localhost:5173
+
+// Doc: CORS origin — reads from CORS_ORIGIN env var so each environment
+//      (local, staging, prod) restricts access to the correct frontend.
+//      Falls back to localhost:5173 for local development.
+const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: corsOrigin,
     methods:['GET', 'POST'],
     credentials: false
 }));
+
 // Doc: JSON body parser middleware
 app.use(express.json());
+
+// Doc: Health check endpoint used by the Fargate/ALB target group.
+//      Returns 200 immediately — no auth required.
+app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' });
+});
 
 // Doc: Route definitions mapping URL paths to route handlers
 app.use('/users', userRoutes);

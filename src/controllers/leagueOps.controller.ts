@@ -171,6 +171,64 @@ export const getRostersByFranchiseAndSeason = async (req: Request, res: Response
     }
 };
 
+// Doc: Stores an individual fan survey response for a specific episode.
+// Doc: Body: {franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed}
+// Doc: Route: POST /leagueOps/submitFanSurvey
+export const submitFanSurvey = async (req: Request, res: Response) => {
+    const { franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed } = req.body;
+    const submittedBy = (req as any).user?.email;
+
+    if (!franchise || !season || !episode || !queenOfTheWeek || !bottomOfTheWeek || !lipSyncWinner || !bestDressed || !worstDressed) {
+        logger.error('LeagueOps.Controller.ts: submitFanSurvey() - missing required fields');
+        return res.status(400).json({ Error: 'All survey fields are required' });
+    }
+
+    logger.info('LeagueOps.Controller.ts: submitFanSurvey() - request received', { franchise, season, episode, submittedBy });
+
+    try {
+        const resp = await leagueOpsService.submitFanSurvey(
+            franchise, Number(season), Number(episode), submittedBy,
+            queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed
+        );
+        logger.info('LeagueOps.Controller.ts: submitFanSurvey() - response stored successfully');
+        return res.status(201).json(resp);
+    } catch (error: any) {
+        if (error?.code === 'P2002') {
+            logger.error('LeagueOps.Controller.ts: submitFanSurvey() - duplicate submission', { submittedBy, franchise, season, episode });
+            return res.status(409).json({ Error: 'You have already submitted a survey for this episode' });
+        }
+        logger.error('LeagueOps.Controller.ts: submitFanSurvey() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error submitting fan survey' });
+    }
+};
+
+// Doc: Tallies fan survey votes for an episode and applies point adjustments to all rosters.
+// Doc: Body: {franchise, season, episode} — should only be called after the Friday-Thursday window closes.
+// Doc: Route: POST /leagueOps/computeFanSurvey
+export const computeFanSurvey = async (req: Request, res: Response) => {
+    const { franchise, season, episode } = req.body;
+
+    if (!franchise || !season || !episode) {
+        logger.error('LeagueOps.Controller.ts: computeFanSurvey() - missing required fields');
+        return res.status(400).json({ Error: 'franchise, season, and episode are required' });
+    }
+
+    logger.info('LeagueOps.Controller.ts: computeFanSurvey() - request received', { franchise, season, episode });
+
+    try {
+        const resp = await leagueOpsService.computeFanSurvey(franchise, Number(season), Number(episode));
+        if (!resp) {
+            logger.error('LeagueOps.Controller.ts: computeFanSurvey() - no responses or rosters found');
+            return res.status(404).json({ Error: 'No survey responses found for this episode' });
+        }
+        logger.info('LeagueOps.Controller.ts: computeFanSurvey() - points applied successfully', { updatedRosters: resp.length });
+        return res.status(201).json({ updatedRosters: resp.length, rosters: resp });
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: computeFanSurvey() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error computing fan survey results' });
+    }
+};
+
 // Doc: Creates and adds a new roster record to the database.
 // Doc: Args: req (Request) - Express request object with body containing {leagueName: string, email: string, teamName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/rosters

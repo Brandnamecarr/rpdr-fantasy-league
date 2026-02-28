@@ -3,7 +3,7 @@ import logger from "../util/LoggerImpl";
 
 import { getLeague } from "./league.service";
 import {League, Roster, User} from '@prisma/client';
-import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards} from '../enums/enums';
+import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
 import { QueenStatus } from "@prisma/client";
 
 // Doc: Helper function that calculates point changes for queens based on weekly episode results.
@@ -328,4 +328,98 @@ export const getRostersByFranchiseAndLeague = (franchise: string, season: number
             season: season,
         },
     });
+};
+
+// Doc: Stores an individual fan survey response. Enforces one submission per user per episode via a unique constraint.
+// Doc: Args: franchise, season, episode - identify the episode; submittedBy - user email; queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed - selected queen names
+// Doc: Returns: Promise<FanSurveyResponse> - The created response record, or throws if user already submitted
+export const submitFanSurvey = async (
+    franchise: string, season: number, episode: number, submittedBy: string,
+    queenOfTheWeek: string, bottomOfTheWeek: string, lipSyncWinner: string,
+    bestDressed: string, worstDressed: string
+) => {
+    logger.info('LeagueOps.Service.ts: submitFanSurvey() - storing fan survey response', {franchise, season, episode, submittedBy});
+    return prisma.fanSurveyResponse.create({
+        data: { franchise, season, episode, submittedBy, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed }
+    });
+};
+
+// Doc: Helper — counts votes per queen for a given field and returns all queens tied for the plurality.
+const tallyVotes = (responses: any[], field: string): string[] => {
+    const counts: Record<string, number> = {};
+    responses.forEach(r => {
+        const val = r[field] as string;
+        counts[val] = (counts[val] || 0) + 1;
+    });
+    const maxVotes = Math.max(...Object.values(counts));
+    return Object.entries(counts).filter(([, v]) => v === maxVotes).map(([k]) => k);
+};
+
+// Doc: Tallies all fan survey responses for an episode, finds the plurality winner(s) per category, and adjusts all roster points accordingly.
+// Doc: Awards points to all tied queens in the event of a tie. Should be called after the Friday-Thursday survey window closes.
+// Doc: Args: franchise, season, episode - identify the episode to compute
+// Doc: Returns: Promise<Roster[] | null> - Updated roster records or null if no responses found
+export const computeFanSurvey = async (franchise: string, season: number, episode: number) => {
+    logger.info('LeagueOps.Service.ts: computeFanSurvey() - tallying votes', {franchise, season, episode});
+
+    const responses = await prisma.fanSurveyResponse.findMany({ where: { franchise, season, episode } });
+    if (responses.length === 0) {
+        logger.error('LeagueOps.Service.ts: computeFanSurvey() - no responses found for episode', {franchise, season, episode});
+        return null;
+    }
+
+    // Tally each category — ties give points to all tied queens
+    const queensOfWeek  = tallyVotes(responses, 'queenOfTheWeek');
+    const bottomQueens  = tallyVotes(responses, 'bottomOfTheWeek');
+    const lipSyncWins   = tallyVotes(responses, 'lipSyncWinner');
+    const bestDressed   = tallyVotes(responses, 'bestDressed');
+    const worstDressed  = tallyVotes(responses, 'worstDressed');
+
+    logger.info('LeagueOps.Service.ts: computeFanSurvey() - vote results', {queensOfWeek, bottomQueens, lipSyncWins, bestDressed, worstDressed});
+
+    // Build score map
+    const scores: Record<string, number> = {};
+    const addScore = (queens: string[], pts: number) =>
+        queens.forEach(q => { scores[q] = (scores[q] || 0) + pts; });
+
+    addScore(queensOfWeek, FanSurveyPoints.QUEEN_OF_WEEK);
+    addScore(bottomQueens,  FanSurveyPoints.BOTTOM_OF_WEEK);
+    addScore(lipSyncWins,   FanSurveyPoints.LIP_SYNC_WINNER);
+    addScore(bestDressed,   FanSurveyPoints.BEST_DRESSED);
+    addScore(worstDressed,  FanSurveyPoints.WORST_DRESSED);
+
+    try {
+        const rosters = await getRostersByFranchiseAndLeague(franchise, season);
+        if (!rosters || rosters.length === 0) {
+            logger.error('LeagueOps.Service.ts: computeFanSurvey() - no rosters found', {franchise, season});
+            return null;
+        }
+
+        const updatePromises = rosters.map(roster => {
+            const pointsEarned = roster.queens.reduce((total, queenName) =>
+                total + (scores[queenName] || 0), 0);
+
+            const pointUpdateArray = [...roster.pointUpdates];
+            if (pointUpdateArray.length > 0) {
+                pointUpdateArray[pointUpdateArray.length - 1] += pointsEarned;
+            } else {
+                pointUpdateArray.push(pointsEarned);
+            }
+
+            return prisma.roster.update({
+                where: { recordId: roster.recordId },
+                data: {
+                    currentPoints: { increment: pointsEarned },
+                    pointUpdates:  { set: pointUpdateArray }
+                }
+            });
+        });
+
+        const results = await prisma.$transaction(updatePromises);
+        logger.info(`LeagueOps.Service.ts: computeFanSurvey() - updated ${results.length} rosters`, {franchise, season, episode});
+        return results;
+    } catch (error) {
+        logger.error('LeagueOps.Service.ts: computeFanSurvey() - transaction failed', {franchise, season, episode, error});
+        return null;
+    }
 };
