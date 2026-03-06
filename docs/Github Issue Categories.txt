@@ -1,0 +1,7 @@
+GITHUB Issue Category:
+
+Bugs = Logical/UI error in program
+Ordeals = Big task/One that will take research 
+Features = Could be S/M/L tasks that enhance or add service to the backend or UI
+Alignments = Getting services, components, and data aligned as it moves through code
+Test = Tests feature, integrations, and services.

@@ -1,0 +1,18 @@
+Roadmap for RPDR Fantasy App 
+
+
+Current Priorities:
+1. Getting python utils set up for registration and surveys with templates
+    1a. Might be worth setting this up as wheel 
+2. getting queens selected in CreateLeagueView
+
+Upcoming Priorities:
+1. E2E Completion for web app
+2. Backend testing (finish BIT)
+3. Work on script to generate documentation
+    3a. Thinking I'll do a comment with some kind of marker and have a python script parse that
+    3b. Use AI to explain code 
+
+Long-term Priorities:
+1. Swift App development
+2. Python Utilities moved to separate repository

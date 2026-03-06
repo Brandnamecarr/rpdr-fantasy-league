@@ -1,0 +1,30 @@
+# Dependencies — reinstalled inside the container
+node_modules/
+
+# Compiled output — rebuilt inside the container
+dist/
+
+# Local environment file — secrets are injected by Fargate task definition
+.env
+
+# Logs — containers write to stdout, not local files
+logs/
+
+# Local dev scripts — not needed in container
+run_local.sh
+run_local_windows.bat
+build_and_run.sh
+run_bit.sh
+
+# Test suite — not part of the production image
+test/
+
+# Documentation
+docs/
+
+# Git internals
+.git/
+.gitignore
+
+# Prisma migration lock (schema is copied; migrations folder is kept)
+# prisma/migrations is intentionally NOT ignored — needed for migrate deploy

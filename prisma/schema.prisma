@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  password    String
+  displayName String?
+  createdAt   DateTime @default(now())
+}
+
+model League {
+  id               Int      @id @default(autoincrement())
+  leagueName       String   @unique
+  franchise        String @default("USA")
+  season           Int    @default(18)
+  owner            String
+  users            String[]
+  maxPlayers       Int
+  createdAt        DateTime @default(now())
+  maxQueensPerTeam Int      @default(3)
+}
+
+model Roster {
+  recordId      Int      @id @default(autoincrement())
+  leagueName    String
+  username      String
+  teamName      String
+  franchise     String @default("USA")
+  season        Int @default(18)
+  queens        String[]
+  currentPoints Int
+  pointUpdates  Int[]
+}
+
+model Notification {
+  notifId     Int      @id @default(autoincrement())
+  source      String
+  destination String
+  resolved    Boolean  @default(false)
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Queen {
+  queenId   Int         @id @default(autoincrement())
+  franchise String
+  season    Int
+  name      String
+  status    QueenStatus @default(ACTIVE)
+  location  String
+}
+
+enum QueenStatus {
+  WINNER
+  ACTIVE
+  ELIMINATED
+  RUNNER_UP
+  UNKNOWN_OR_ERROR
+  MS_CONGENIALITY
+}
+
+enum ActivityStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model ActiveSeasons {
+  seasonId Int @id @default(autoincrement())
+  franchise String
+  season Int
+  activityStatus ActivityStatus @default(INACTIVE)
+
+  @@unique([franchise, season])
+}
+
+model FanSurveyResponse {
+  id              Int      @id @default(autoincrement())
+  franchise       String
+  season          Int
+  episode         Int
+  submittedBy     String
+  queenOfTheWeek  String
+  bottomOfTheWeek String
+  lipSyncWinner   String
+  bestDressed     String
+  worstDressed    String
+  createdAt       DateTime @default(now())
+
+  @@unique([franchise, season, episode, submittedBy])
+}
