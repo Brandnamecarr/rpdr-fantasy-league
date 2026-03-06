@@ -13,6 +13,7 @@ import leagueOpsRoutes from './routes/leagueOps.routes';
 import notifRoutes from './routes/notification.routes';
 import queenRoutes from './routes/queen.routes';
 import activeSeasonRoutes from './routes/activeSeasons.routes';
+import adminRoutes from './routes/admin.routes';
 
 // Doc: Express app instance with middleware configuration
 const app = express();
@@ -43,5 +44,6 @@ app.use('/leagueOps', leagueOpsRoutes);
 app.use('/notifications', notifRoutes);
 app.use('/queens', queenRoutes);
 app.use('/activeSeason', activeSeasonRoutes);
+app.use('/admin', adminRoutes);
 
 export default app;

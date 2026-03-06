@@ -115,6 +115,17 @@ export const getUserRecord = async (email: string) => {
     return collectedData;
 };
 
+// Doc: Updates a user's display name in the database.
+// Doc: Args: email (string) - The user's email address, displayName (string) - The new display name
+// Doc: Returns: Promise<User> - The updated user record
+export const updateDisplayName = async (email: string, displayName: string) => {
+    logger.debug("User.Service.ts: Updating displayName for: ", {email});
+    return prisma.user.update({
+        where: { email },
+        data: { displayName },
+    });
+};
+
 // Doc: Updates a user's password in the database with a new hashed password.
 // Doc: Args: email (string) - The user's email address, newHashedPassword (string) - The new hashed password
 // Doc: Returns: Promise<User> - The updated user record

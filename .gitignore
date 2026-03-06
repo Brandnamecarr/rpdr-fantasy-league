@@ -14,3 +14,5 @@ logs/*
 logs/app.log
 
 .env
+dist/
+dist/*

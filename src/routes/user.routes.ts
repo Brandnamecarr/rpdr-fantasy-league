@@ -19,5 +19,7 @@ router.post("/updatePassword", protect, userController.updatePassword);
 router.get('/getUserRecord', protect, userController.getUserRecord);
 // Doc: GET /users/getAllEmails - Retrieves all user email addresses (protected route)
 router.get('/getAllEmails', protect, userController.getAllEmails);
+// Doc: PATCH /users/displayName - Updates the authenticated user's display name (body: {displayName: string}) - Protected route
+router.patch('/displayName', protect, userController.updateDisplayName);
 
 export default router;

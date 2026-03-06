@@ -5,6 +5,8 @@ import logger from './LoggerImpl';
 import { NextFunction, Request, Response } from 'express';
 import { AuthRequest, UserTokenPayload } from '../types/Interfaces';
 
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
+
 
 // Doc: Secret key for JWT signing — must be set via JWT_SECRET env var in production.
 //      Falls back to 'testing' only for local development; Fargate will always inject this.
@@ -48,6 +50,31 @@ export const getAuthHeader = () => {
         }
     }
     return {};
+};
+
+// Doc: Express middleware that protects admin routes using a static API key from the ADMIN_API_KEY env var.
+// Doc: Usage: Authorization: Bearer <ADMIN_API_KEY>  (never expires — rotate by changing the env var)
+export const protectAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!ADMIN_API_KEY) {
+        logger.error('TokenManager.protectAdmin() -> ADMIN_API_KEY env var is not set');
+        return res.status(500).json({ Error: 'Admin key not configured on server' });
+    }
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1] ?? undefined;
+
+    if (!token) {
+        logger.error('TokenManager.protectAdmin() -> No token present');
+        return res.status(401).json({ Error: 'Not authorized or no token present' });
+    }
+
+    if (token !== ADMIN_API_KEY) {
+        logger.error('TokenManager.protectAdmin() -> Invalid admin key');
+        return res.status(401).json({ Error: 'Invalid admin key' });
+    }
+
+    logger.debug('TokenManager.protectAdmin() -> admin key verified');
+    next();
 };
 
 // Doc: Express middleware that protects routes by verifying JWT token from Authorization header.

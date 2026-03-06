@@ -4,7 +4,7 @@ import * as passwordManager from "../util/PasswordManager";
 import * as tokenManager from '../util/TokenManager';
 import * as notificationService from '../services/notification.service';
 import logger from "../util/LoggerImpl";
-import { UserTokenPayload } from "../types/Interfaces";
+import { AuthRequest, UserTokenPayload } from "../types/Interfaces";
 
 // Doc: Retrieves all user records from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
@@ -125,11 +125,35 @@ export const authenticateUser = async (req: Request, res: Response) => {
         return res.status(200).json({
             status: "Login Successful",
             email: email,
+            displayName: userRecord.displayName,
             token: token
         });
     } catch(error) {
         logger.error('User.Controller: authenticateUser() - Unexpected error during authentication', {email, error: error, clientIP});
         res.status(500).json({Error: "Server Error"});
+    }
+};
+
+// Doc: Updates the display name for the authenticated user.
+// Doc: Args: req (AuthRequest) - Express request with JWT user, res (Response) - Express response object
+// Doc: Route: PATCH /users/displayName
+export const updateDisplayName = async (req: AuthRequest, res: Response) => {
+    const { displayName } = req.body;
+    const email = req.user!.email;
+
+    if (!displayName) {
+        logger.error('User.Controller.ts: updateDisplayName() - missing displayName in body', {email});
+        return res.status(400).json({ Error: 'displayName is required' });
+    }
+
+    logger.info('User.Controller.ts: updateDisplayName() - request received', {email, displayName});
+    try {
+        const updated = await userService.updateDisplayName(email, displayName);
+        logger.info('User.Controller.ts: updateDisplayName() - updated successfully', {email, displayName: updated.displayName});
+        return res.status(200).json({ displayName: updated.displayName });
+    } catch(error) {
+        logger.error('User.Controller.ts: updateDisplayName() - unexpected error', {email, error});
+        return res.status(500).json({ Error: `Error updating display name for ${email}` });
     }
 };
 
