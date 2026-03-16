@@ -21,5 +21,7 @@ router.get('/getUserRecord', protect, userController.getUserRecord);
 router.get('/getAllEmails', protect, userController.getAllEmails);
 // Doc: PATCH /users/displayName - Updates the authenticated user's display name (body: {displayName: string}) - Protected route
 router.patch('/displayName', protect, userController.updateDisplayName);
+// Doc: POST /users/getDisplayNames - Retrieves display names for a list of emails (body: {emails: string[]}) - Protected route
+router.post('/getDisplayNames', protect, userController.getDisplayNames);
 
 export default router;

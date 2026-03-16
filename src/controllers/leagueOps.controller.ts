@@ -229,6 +229,43 @@ export const computeFanSurvey = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Increases the maxPlayers cap for a league. Only the league owner may call this.
+// Doc: Args: req (Request) - body containing {leagueName, franchise, season, newMaxPlayers}, res (Response)
+// Doc: Route: POST /leagueOps/increaseLeagueSize
+export const increaseLeagueSize = async (req: Request, res: Response) => {
+    const { leagueName, franchise, season, newMaxPlayers } = req.body;
+    const requestingEmail = (req as any).user?.email;
+
+    if (!leagueName || !franchise || !season || newMaxPlayers == null) {
+        logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - missing required fields');
+        return res.status(400).json({ Error: 'leagueName, franchise, season, and newMaxPlayers are required' });
+    }
+
+    logger.info('LeagueOps.Controller.ts: increaseLeagueSize() - request received', { leagueName, newMaxPlayers, requestingEmail });
+
+    try {
+        const league = await leagueService.getLeague(leagueName, franchise, Number(season));
+        if (!league) {
+            logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - league not found', { leagueName });
+            return res.status(404).json({ Error: 'League not found' });
+        }
+        if (league.owner !== requestingEmail) {
+            logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - requester is not the owner', { requestingEmail, owner: league.owner });
+            return res.status(403).json({ Error: 'Only the league owner can increase league size' });
+        }
+        if (Number(newMaxPlayers) <= league.maxPlayers) {
+            logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - new size not greater than current', { current: league.maxPlayers, requested: newMaxPlayers });
+            return res.status(400).json({ Error: `New size must be greater than the current limit of ${league.maxPlayers}` });
+        }
+        const result = await leagueOpsService.increaseLeagueSize(leagueName, Number(newMaxPlayers));
+        logger.info('LeagueOps.Controller.ts: increaseLeagueSize() - updated successfully', { leagueName, newMaxPlayers });
+        return res.status(200).json(result);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error increasing league size' });
+    }
+};
+
 // Doc: Creates and adds a new roster record to the database.
 // Doc: Args: req (Request) - Express request object with body containing {leagueName: string, email: string, teamName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/rosters

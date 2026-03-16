@@ -37,7 +37,7 @@ export const getAllEmails = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {email: string, password: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /users/register or POST /users
 export const createUser = async (req: Request, res: Response) => {
-    const {email, password} = req.body;
+    const {email, password, displayName} = req.body;
     logger.debug('User.Controller.ts: createUser() called with email: ', {email:email, password:password});
 
     // handle the hashing of the password here //
@@ -47,7 +47,7 @@ export const createUser = async (req: Request, res: Response) => {
             logger.error('User.Controller.ts: error hashing password');
             return res.json(404).json({Error: "Unable to hash password, not ceating user"});
         }
-        const user = await userService.createUser(email, hashedPassword);
+        const user = await userService.createUser(email, hashedPassword, displayName);
         logger.debug('User.Controller.ts: returning status=201, ', {userData: user});
 
         // provide token when user is created //
@@ -131,6 +131,25 @@ export const authenticateUser = async (req: Request, res: Response) => {
     } catch(error) {
         logger.error('User.Controller: authenticateUser() - Unexpected error during authentication', {email, error: error, clientIP});
         res.status(500).json({Error: "Server Error"});
+    }
+};
+
+// Doc: Retrieves display names for a list of user emails.
+// Doc: Args: req (Request) - body containing {emails: string[]}, res (Response)
+// Doc: Route: POST /users/getDisplayNames
+export const getDisplayNames = async (req: Request, res: Response) => {
+    const { emails } = req.body;
+    if (!emails || !Array.isArray(emails)) {
+        logger.error('User.Controller.ts: getDisplayNames() - emails array missing or invalid');
+        return res.status(400).json({ Error: 'emails array is required' });
+    }
+    logger.debug('User.Controller.ts: getDisplayNames() - request received', {count: emails.length});
+    try {
+        const result = await userService.getDisplayNames(emails);
+        return res.status(200).json(result);
+    } catch (error) {
+        logger.error('User.Controller.ts: getDisplayNames() - unexpected error', {error});
+        return res.status(500).json({ Error: 'Error fetching display names' });
     }
 };
 

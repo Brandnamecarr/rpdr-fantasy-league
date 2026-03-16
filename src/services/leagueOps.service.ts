@@ -289,6 +289,17 @@ export const removeUserFromLeague = async (email: string, league: League) => {
     }
 };
 
+// Doc: Increases the maxPlayers cap for a league.
+// Doc: Args: leagueName (string) - The league to update, newMaxPlayers (number) - The new maximum player count
+// Doc: Returns: Promise<League> - The updated league record
+export const increaseLeagueSize = async (leagueName: string, newMaxPlayers: number) => {
+    logger.info('LeagueOps.Service.ts: increaseLeagueSize() - updating maxPlayers', {leagueName, newMaxPlayers});
+    return prisma.league.update({
+        where: { leagueName },
+        data: { maxPlayers: newMaxPlayers },
+    });
+};
+
 // Doc: TODO: Creates a new roster record (currently not implemented).
 // Doc: Args: leagueName (string) - League name, email (string) - User email, teamName (string) - Team name, queens (string[]) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
 // Doc: Returns: null - Not yet implemented

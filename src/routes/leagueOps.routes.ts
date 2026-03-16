@@ -25,6 +25,8 @@ router.post('/removeUserFromLeague', leagueOpsController.removeUserFromLeague);
 router.post("/getAllLeagueRosters", leagueOpsController.getAllRostersByLeague);
 // Doc: POST /leagueOps/addRoster - Creates a new roster record (body: {leagueName, email, teamName, queens, franchise, season})
 router.post("/addRoster", leagueOpsController.addRoster);
+// Doc: POST /leagueOps/increaseLeagueSize - Increases the maxPlayers cap for a league (body: {leagueName, franchise, season, newMaxPlayers})
+router.post("/increaseLeagueSize", leagueOpsController.increaseLeagueSize);
 // Doc: POST /leagueOps/submitFanSurvey - Store one fan survey response per user per episode (body: {franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed})
 router.post("/submitFanSurvey", leagueOpsController.submitFanSurvey);
 // Doc: POST /leagueOps/computeFanSurvey - Tally votes and apply point adjustments after the Fri-Thu window closes (body: {franchise, season, episode})

@@ -25,12 +25,13 @@ export const getAllEmails = () => {
 // Doc: Creates a new user record in the database with email and hashed password.
 // Doc: Args: email (string) - User's email address, password (string) - User's hashed password
 // Doc: Returns: Promise<User> - The created user record
-export const createUser = (email: string, password: string) => {
+export const createUser = (email: string, password: string, displayName?: string | null) => {
     logger.debug('User.Service.ts: creating user: ', {email: email});
     return prisma.user.create({
-        data: { 
-            email: email, 
-            password: password, 
+        data: {
+            email: email,
+            password: password,
+            ...(displayName ? { displayName } : {}),
         }
     });
 };
@@ -113,6 +114,17 @@ export const getUserRecord = async (email: string) => {
     };
 
     return collectedData;
+};
+
+// Doc: Retrieves display names for a list of user emails.
+// Doc: Args: emails (string[]) - Array of email addresses to look up
+// Doc: Returns: Promise<{email: string, displayName: string | null}[]> - Array of email/displayName pairs
+export const getDisplayNames = async (emails: string[]) => {
+    logger.debug('User.Service.ts: getDisplayNames() - fetching display names', {count: emails.length});
+    return prisma.user.findMany({
+        where: { email: { in: emails } },
+        select: { email: true, displayName: true },
+    });
 };
 
 // Doc: Updates a user's display name in the database.
