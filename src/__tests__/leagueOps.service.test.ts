@@ -187,7 +187,7 @@ describe('weeklySurvey', () => {
         const roster = makeRoster({ queens: ['Shea'], pointUpdates: [10] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklySurvey(['Shea'], [], [], [], []);
+        await weeklySurvey('USA', 18, ['Shea'], [], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -202,7 +202,7 @@ describe('weeklySurvey', () => {
         const roster = makeRoster({ queens: ['Alexis'], pointUpdates: [5] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklySurvey([], ['Alexis'], [], [], []);
+        await weeklySurvey('USA', 18, [], ['Alexis'], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -218,7 +218,7 @@ describe('weeklySurvey', () => {
         p.roster.findMany.mockResolvedValue([roster]);
 
         // Toot (20) + Iconic (15) = 35
-        await weeklySurvey(['Monet'], [], ['Monet'], [], []);
+        await weeklySurvey('USA', 18, ['Monet'], [], ['Monet'], [], []);
 
         const expected = PointManipulation.GOOD_RUNWAY + PointManipulation.ICONIC_MOMENT;
         expect(p.roster.update).toHaveBeenCalledWith(

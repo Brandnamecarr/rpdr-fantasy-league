@@ -72,13 +72,32 @@ enum ActivityStatus {
   INACTIVE
 }
 
+enum BracketName {
+  A
+  B
+  C
+}
+
 model ActiveSeasons {
-  seasonId Int @id @default(autoincrement())
-  franchise String
-  season Int
-  activityStatus ActivityStatus @default(INACTIVE)
+  seasonId        Int            @id @default(autoincrement())
+  franchise       String
+  season          Int
+  activityStatus  ActivityStatus @default(INACTIVE)
+  premiereDate    String?
+  isUsingBrackets Boolean        @default(false)
+  bracketCount    Int?
 
   @@unique([franchise, season])
+}
+
+model Bracket {
+  bracketId   Int         @id @default(autoincrement())
+  franchise   String
+  season      Int
+  bracketName BracketName
+  queens      String[]
+
+  @@unique([franchise, season, bracketName])
 }
 
 model FanSurveyResponse {
@@ -95,4 +114,21 @@ model FanSurveyResponse {
   createdAt       DateTime @default(now())
 
   @@unique([franchise, season, episode, submittedBy])
+}
+
+model SeasonFinaleResponse {
+  id              Int      @id @default(autoincrement())
+  franchise       String
+  season          Int
+  submittedBy     String
+  winner          String
+  runnerUp        String
+  missCongeniality String
+  bestDressed     String
+  fanFavorite     String
+  tradeOfTheSeason String
+  mostImproved    String
+  createdAt       DateTime @default(now())
+
+  @@unique([franchise, season, submittedBy])
 }

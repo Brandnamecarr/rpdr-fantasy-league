@@ -8,9 +8,13 @@ import { AuthRequest, UserTokenPayload } from '../types/Interfaces';
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
 
 
-// Doc: Secret key for JWT signing — must be set via JWT_SECRET env var in production.
-//      Falls back to 'testing' only for local development; Fargate will always inject this.
-const SECRET_KEY = process.env.JWT_SECRET ?? 'testing';
+// Doc: Secret key for JWT signing — must be set via JWT_SECRET env var.
+//      Throws at startup in production if missing so misconfigured deploys fail fast.
+const rawSecret = process.env.JWT_SECRET;
+if (!rawSecret && process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET env var must be set in production');
+}
+const SECRET_KEY = rawSecret ?? 'testing';
 
 // Doc: Generates a JWT token for a user with 1 hour expiration.
 // Doc: Args: user (UserTokenPayload) - User payload containing id and email
@@ -33,23 +37,6 @@ export const verifyToken = (token: string) => {
         logger.error('TokenManager.verifyToken() -> error verifying/invalid token', {token: token});
         return null;
     }
-};
-
-// Doc: NOTE: This function is for client-side use only and should not be called from Node.js backend
-// Doc: Helper function to get authorization header from localStorage (for client-side use).
-// Doc: Args: None
-// Doc: Returns: object - Authorization header object with Bearer token or empty object
-export const getAuthHeader = () => {
-    // This only works in browser environment, not Node.js
-    if (typeof window !== 'undefined' && window.localStorage) {
-        const token = localStorage.getItem('token');
-        if(token) {
-            return {
-                Authorization: `Bearer ${token}`
-            };
-        }
-    }
-    return {};
 };
 
 // Doc: Express middleware that protects admin routes using a static API key from the ADMIN_API_KEY env var.

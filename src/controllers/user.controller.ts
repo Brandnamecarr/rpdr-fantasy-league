@@ -9,7 +9,7 @@ import { AuthRequest, UserTokenPayload } from "../types/Interfaces";
 // Doc: Retrieves all user records from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
 // Doc: Route: Likely GET /users
-export const getUsers = async (req: Request, res: Response) => {
+export const getUsers = async (_req: Request, res: Response) => {
     const users = await userService.getUsers();
     if(!users) {
         logger.error(`User.Controller.ts: Error fetching users from database`);
@@ -22,11 +22,11 @@ export const getUsers = async (req: Request, res: Response) => {
 // Doc: Retrieves all user email addresses from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
 // Doc: Route: Likely GET /users/emails
-export const getAllEmails = async (req: Request, res: Response) => {
+export const getAllEmails = async (_req: Request, res: Response) => {
     const emails = await userService.getAllEmails();
     if(emails) {
         logger.debug('User.Controller.ts: Got list of emails');
-        res.status(201).json(emails);
+        res.status(200).json(emails);
     } else {
         logger.error(`User.Controller.ts -> error in getAllEmails: unable to get emails from database`);
         res.status(500).json({Error: 'No emails in database'});
@@ -37,7 +37,8 @@ export const getAllEmails = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {email: string, password: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /users/register or POST /users
 export const createUser = async (req: Request, res: Response) => {
-    const {email, password} = req.body;
+    const {email: rawEmail, password, displayName} = req.body;
+    const email = rawEmail?.toLowerCase();
     logger.debug('User.Controller.ts: createUser() called with email: ', {email:email, password:password});
 
     // handle the hashing of the password here //
@@ -45,9 +46,9 @@ export const createUser = async (req: Request, res: Response) => {
         const hashedPassword = await passwordManager.hashPassword(password);
         if(hashedPassword === '' || !hashedPassword) {
             logger.error('User.Controller.ts: error hashing password');
-            return res.json(404).json({Error: "Unable to hash password, not ceating user"});
+            return res.status(404).json({Error: "Unable to hash password, not creating user"});
         }
-        const user = await userService.createUser(email, hashedPassword);
+        const user = await userService.createUser(email, hashedPassword, displayName);
         logger.debug('User.Controller.ts: returning status=201, ', {userData: user});
 
         // provide token when user is created //
@@ -75,7 +76,7 @@ export const getUserRecord = async (req: Request, res: Response) => {
     logger.debug('User.Controller.ts: Loading user record for: ', {email:email});
     try {
         const userRecord = await userService.getUserRecord(email);
-        res.status(201).json(userRecord);
+        res.status(200).json(userRecord);
     } catch(error) {    
         logger.error('User.Controller.ts: Error loading user record: ', {email: email});
         res.status(500).json({Error: `Error loading record for user ${email}`});
@@ -87,8 +88,9 @@ export const getUserRecord = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {email: string, password: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /users/login or POST /users/auth
 export const authenticateUser = async (req: Request, res: Response) => {
-    const {email, password} = req.body;
-    const clientIP = req.ip || req.connection.remoteAddress;
+    const {email: rawEmail, password} = req.body;
+    const email = rawEmail?.toLowerCase();
+    const clientIP = req.ip;
 
     logger.info("User.Controller: authenticateUser() - Authentication attempt initiated", {email, clientIP});
 
@@ -131,6 +133,25 @@ export const authenticateUser = async (req: Request, res: Response) => {
     } catch(error) {
         logger.error('User.Controller: authenticateUser() - Unexpected error during authentication', {email, error: error, clientIP});
         res.status(500).json({Error: "Server Error"});
+    }
+};
+
+// Doc: Retrieves display names for a list of user emails.
+// Doc: Args: req (Request) - body containing {emails: string[]}, res (Response)
+// Doc: Route: POST /users/getDisplayNames
+export const getDisplayNames = async (req: Request, res: Response) => {
+    const { emails } = req.body;
+    if (!emails || !Array.isArray(emails)) {
+        logger.error('User.Controller.ts: getDisplayNames() - emails array missing or invalid');
+        return res.status(400).json({ Error: 'emails array is required' });
+    }
+    logger.debug('User.Controller.ts: getDisplayNames() - request received', {count: emails.length});
+    try {
+        const result = await userService.getDisplayNames(emails);
+        return res.status(200).json(result);
+    } catch (error) {
+        logger.error('User.Controller.ts: getDisplayNames() - unexpected error', {error});
+        return res.status(500).json({ Error: 'Error fetching display names' });
     }
 };
 
@@ -183,9 +204,13 @@ export const updatePassword = async (req: Request, res: Response) => {
             logger.error('User.Controller.ts: updatePassword() - service returned null', {email});
             return res.status(500).json({Error: `Failed to update password for ${email}`});
         }
-        let tempNotif = notificationService.makeNewNotification("SERVER", userRecord.email, "Your password has been updated");
+        try {
+            await notificationService.makeNewNotification("SERVER", userRecord.email, "Your password has been updated");
+        } catch (notifError) {
+            logger.error('User.Controller.ts: updatePassword() - notification failed (non-fatal)', {email, notifError});
+        }
         logger.info('User.Controller.ts: updatePassword() - password updated successfully', {email});
-        return res.status(201).json({Message: `Successfully updated password for ${email}`});
+        return res.status(200).json({Message: `Successfully updated password for ${email}`});
     } catch(error) {
         logger.error('User.Controller.ts: updatePassword() - unexpected error', {email, error});
         return res.status(500).json({Error: `Error updating password for ${email}`});

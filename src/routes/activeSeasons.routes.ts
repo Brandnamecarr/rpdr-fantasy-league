@@ -11,13 +11,20 @@ router.use(protect);
 
 // Doc: GET /activeSeasons/getActiveSeasons - Retrieves all seasons with active status
 router.get("/getActiveSeasons", activeSeasonsController.getActiveSeasons);
+// Doc: GET /activeSeasons/getUpcomingSeasons - Retrieves all inactive/upcoming seasons
+router.get("/getUpcomingSeasons", activeSeasonsController.getUpcomingSeasons);
 // Doc: GET /activeSeasons/getAllSeasons - Retrieves all seasons regardless of status
 router.get("/getAllSeasons", activeSeasonsController.getAllSeasons);
 
-// Doc: POST /activeSeasons/addSeason - Creates a new season record (body: {franchise, season})
+// Doc: POST /activeSeasons/addSeason - Creates a new season record (body: {franchise, season, isUsingBrackets?, bracketCount?})
 router.post("/addSeason", activeSeasonsController.addSeason);
 // Doc: POST /activeSeasons/updateSeason - Updates a season's activity status (body: {franchise, season, status})
 router.post("/updateSeason", activeSeasonsController.updateSeason);
+
+// Doc: POST /activeSeason/addBracket - Creates a bracket record (body: {franchise, season, bracketName, queens})
+router.post("/addBracket", activeSeasonsController.addBracket);
+// Doc: GET /activeSeason/getBrackets?franchise=&season= - Returns brackets for a season ordered A→B→C
+router.get("/getBrackets", activeSeasonsController.getBrackets);
 
 
 export default router;

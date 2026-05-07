@@ -10,6 +10,7 @@ export class ConsoleLogger implements CustomLogger {
     private currentLevel: LogLevel;
     private serviceName: string;
     private logFilePath: string;
+    private static readonly MAX_LOG_BYTES = 10 * 1024 * 1024; // 10 MB
 
     constructor(serviceName: string, currentLevel: LogLevel = LogLevel.DEBUG, logFileName: string='logs/app.log') {
         this.currentLevel = currentLevel;
@@ -22,9 +23,22 @@ export class ConsoleLogger implements CustomLogger {
     // Doc: Private method that ensures the log directory exists, creates it if needed
     private ensureLogDirectory(): void {
         const dir = path.dirname(this.logFilePath);
-        if(!fs.existsSync(dir))
-        {
+        if(!fs.existsSync(dir)) {
             fs.mkdirSync(dir, {recursive: true});
+        }
+    }
+
+    // Doc: Rotates log file when it exceeds MAX_LOG_BYTES — renames to .old, discarding prior .old.
+    private rotateIfNeeded(): void {
+        try {
+            const stats = fs.statSync(this.logFilePath);
+            if (stats.size >= ConsoleLogger.MAX_LOG_BYTES) {
+                const rotatedPath = this.logFilePath + '.old';
+                if (fs.existsSync(rotatedPath)) fs.unlinkSync(rotatedPath);
+                fs.renameSync(this.logFilePath, rotatedPath);
+            }
+        } catch {
+            // File doesn't exist yet — nothing to rotate
         }
     }
 
@@ -34,10 +48,12 @@ export class ConsoleLogger implements CustomLogger {
     private writeToFile(logEntry: object): void {
         const jsonString = JSON.stringify(logEntry);
 
-        // Always emit to stdout so CloudWatch Logs captures it in Fargate
-        process.stdout.write(jsonString + '\n');
+        // Only emit to stdout in production (Fargate/CloudWatch). Locally, file is enough.
+        if (process.env.NODE_ENV === 'production') {
+            process.stdout.write(jsonString + '\n');
+        }
 
-        // Also persist to local file (useful in local dev; ignored in ephemeral containers)
+        this.rotateIfNeeded();
         try {
             fs.appendFileSync(this.logFilePath, jsonString + '\n');
         } catch(error) {
@@ -84,10 +100,19 @@ export class ConsoleLogger implements CustomLogger {
     }
 }
 
-// Doc: Singleton logger instance configured for the rpdr-fantasy-app service with DEBUG level logging
+// Doc: Singleton logger instance. Log level driven by LOG_LEVEL env var (ERROR/INFO/DEBUG).
+//      Defaults to INFO locally so debug noise stays out of the terminal.
+function parseLogLevel(raw?: string): LogLevel {
+    switch (raw?.toUpperCase()) {
+        case 'ERROR': return LogLevel.ERROR;
+        case 'DEBUG': return LogLevel.DEBUG;
+        default:      return LogLevel.INFO;
+    }
+}
+
 const logger: CustomLogger = new ConsoleLogger(
     'rpdr-fantasy-app',
-    LogLevel.DEBUG
+    parseLogLevel(process.env.LOG_LEVEL)
 );
 
 export default logger;

@@ -25,12 +25,14 @@ export const getAllEmails = () => {
 // Doc: Creates a new user record in the database with email and hashed password.
 // Doc: Args: email (string) - User's email address, password (string) - User's hashed password
 // Doc: Returns: Promise<User> - The created user record
-export const createUser = (email: string, password: string) => {
-    logger.debug('User.Service.ts: creating user: ', {email: email});
+export const createUser = (email: string, password: string, displayName?: string | null) => {
+    const normalizedEmail = email.toLowerCase();
+    logger.debug('User.Service.ts: creating user: ', {email: normalizedEmail});
     return prisma.user.create({
-        data: { 
-            email: email, 
-            password: password, 
+        data: {
+            email: normalizedEmail,
+            password: password,
+            ...(displayName ? { displayName } : {}),
         }
     });
 };
@@ -39,10 +41,11 @@ export const createUser = (email: string, password: string) => {
 // Doc: Args: email (string) - The user's email address
 // Doc: Returns: Promise<User | null> - The user record or null if not found
 export const getUserByName = async (email: string) => {
-    logger.debug('User.Service.ts: finding user in database: ', {email: email});
+    const normalizedEmail = email.toLowerCase();
+    logger.debug('User.Service.ts: finding user in database: ', {email: normalizedEmail});
     return prisma.user.findUnique({
         where: {
-            email: email,
+            email: normalizedEmail,
         },
     });
 };
@@ -113,6 +116,17 @@ export const getUserRecord = async (email: string) => {
     };
 
     return collectedData;
+};
+
+// Doc: Retrieves display names for a list of user emails.
+// Doc: Args: emails (string[]) - Array of email addresses to look up
+// Doc: Returns: Promise<{email: string, displayName: string | null}[]> - Array of email/displayName pairs
+export const getDisplayNames = async (emails: string[]) => {
+    logger.debug('User.Service.ts: getDisplayNames() - fetching display names', {count: emails.length});
+    return prisma.user.findMany({
+        where: { email: { in: emails } },
+        select: { email: true, displayName: true },
+    });
 };
 
 // Doc: Updates a user's display name in the database.

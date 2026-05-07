@@ -16,7 +16,7 @@ export const getAllQueens = async (req: Request, res: Response) => {
             return res.status(404).json({Error: "Error fetching all queens"});
         }
         logger.debug('Queen.Controller.ts: getAllQueens() - returning queen records', {count: queens.length});
-        res.status(201).json({queens});
+        res.status(200).json({queens});
     } catch(error) {
         logger.error('Queen.Controller.ts: getAllQueens() - unexpected error', {error: error});
         res.status(500).json({Error: error});
@@ -42,7 +42,7 @@ export const getQueenByName = async (req: Request, res: Response) => {
             return res.status(404).json({Error: `Error getting records for ${name}`});
         }
         logger.debug('Queen.Controller.ts: getQueenByName() - returning records', {name, count: queenRecord.length});
-        res.status(201).json(queenRecord);
+        res.status(200).json(queenRecord);
     } catch(error) {
         logger.error("Queen.Controller.ts: getQueenByName() - unexpected error", {name, error});
         res.status(500).json({Error: 'Error getting Queen by name'});
@@ -75,9 +75,9 @@ export const getQueenStatus = async(req:Request, res: Response) => {
             return res.status(404).json({Error: "No queen found matching params"});
         }
         logger.debug('Queen.Controller.ts: getQueenStatus() - returning queen record', {franchise, season, name});
-        res.status(201).json(queen);
-    } catch(erorr) {
-        logger.error('Queen.Controller.ts: getQueenStatus() - unexpected error', {franchise, season, name, error: erorr});
+        res.status(200).json(queen);
+    } catch(error) {
+        logger.error('Queen.Controller.ts: getQueenStatus() - unexpected error', {franchise, season, name, error});
         res.status(500).json({Error: "Error with getQueenStatus()"});
     }
 };
@@ -103,7 +103,7 @@ export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
             logger.error('Queen.Controller.ts: Error getting by franchise and season');
             return res.status(404).json({Error: 'Error getting queens by Franchise and Season'});
         }
-        res.status(201).json(queens);
+        res.status(200).json(queens);
     } catch(error) {
         logger.error('Queen.Controller.ts: Error in getByFranchiseAndSeason() -> ', {error: error});
         res.status(500).json({Error: error});
@@ -142,7 +142,7 @@ export const addNewQueens = async (req: Request, res: Response) => {
     const queensData = req.body as INTERFACES.QueenInput[];
     logger.debug('Queen.Controller.ts: addNewQueens() - bulk insert request received', {count: Array.isArray(queensData) ? queensData.length : 'invalid'});
 
-    if(!Array.isArray(queensData) || queensData.length == 0) {
+    if(!Array.isArray(queensData) || queensData.length === 0) {
         logger.error('Queen.Controller.ts: addNewQueens() - invalid or empty input array');
         return res.status(404).json({Error: "Error with queensData input"});
     }
@@ -157,7 +157,7 @@ export const addNewQueens = async (req: Request, res: Response) => {
         res.status(201).json(response);
     } catch(error) {
         logger.error('Queen.Controller.ts: addNewQueens() - unexpected error', {count: queensData.length, error});
-        res.status(500).json({Error: "Error inserting list of quenes"});
+        res.status(500).json({Error: "Error inserting list of queens"});
     }
 };
 
@@ -198,7 +198,7 @@ export const getQueenId = async (req: Request, res: Response) => {
             return res.status(404).json({Error: "Unable to find queenID by specified parameters"});
         }
         logger.debug('Queen.Controller.ts: returning queenRecord from getQueenId()');
-        res.status(201).json(queenRecord);
+        res.status(200).json(queenRecord);
     } catch(error) {
         logger.error('Queen.Controller.ts: error in getQueenId: ', {error});
         res.status(500).json({Error: 'Error retrieving queenID'});
