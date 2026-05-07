@@ -8,5 +8,5 @@ const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
 // Doc: Starts the Express server listening on the specified port
 app.listen(PORT, () => {
-    console.log(`Server.ts running on port ${PORT}.`);
+    logger.info(`Server.ts running on port ${PORT}.`);
 });

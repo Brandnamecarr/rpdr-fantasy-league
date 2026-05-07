@@ -2,7 +2,7 @@ import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
 import { getLeague } from "./league.service";
-import {League, Roster, User} from '@prisma/client';
+import {League, Roster, User, BracketName} from '@prisma/client';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
 import { QueenStatus } from "@prisma/client";
 
@@ -49,14 +49,30 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
 // Doc: Args: franchise (string) - Franchise name, season (number) - Season number, maxiWinner (string[]) - Maxi challenge winners, isSnatchGame (boolean) - Whether episode is Snatch Game, miniWinner (string[]) - Mini challenge winners, topQueens (string[]) - Top placement queens, safeQueens (string[]) - Safe queens, bottomQueens (string[]) - Bottom placement queens, lipSyncWinner (string[]) - Lip sync winners, eliminated (string[]) - Eliminated queens
 // Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
 export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[],
-    safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[]) => {
-        logger.info('LeagueOps.Service.ts: weeklyUpdate() - processing weekly episode results', {franchise, season, maxiWinner, isSnatchGame, eliminated});
+    safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[], bracketName?: BracketName) => {
+        logger.info('LeagueOps.Service.ts: weeklyUpdate() - processing weekly episode results', {franchise, season, maxiWinner, isSnatchGame, eliminated, bracketName});
 
         // make weeklyQueenUpdateScores object:
         let weeklyQueenScores = weeklyUpdateObjectHelper(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated);
         if(!weeklyQueenScores) {
             logger.error('LeagueOps.Service.ts: weeklyQueenScores is null');
             return null;
+        }
+
+        // Apply bracket filter when bracketName is supplied
+        if (bracketName) {
+            const bracket = await prisma.bracket.findFirst({ where: { franchise, season, bracketName } });
+            if (!bracket) {
+                logger.error('LeagueOps.Service.ts: weeklyUpdate() - bracket not found', {franchise, season, bracketName});
+                return null;
+            }
+            const bracketQueens = new Set(bracket.queens);
+            for (const queen of Object.keys(weeklyQueenScores)) {
+                if (!bracketQueens.has(queen)) {
+                    delete weeklyQueenScores[queen];
+                }
+            }
+            logger.debug('LeagueOps.Service.ts: weeklyUpdate() - applied bracket filter', {bracketName, bracketQueens: bracket.queens.length});
         }
 
         // 1. load all records from the Roster column
@@ -147,10 +163,10 @@ const weeklySurveyObjectHelper = (toots: string[], boots: string[], iconicQueens
 };
 
 // Doc: Processes weekly survey results and updates all rosters' points based on bonus/penalty categories.
-// Doc: Args: toots (string[]) - Queens with good runways, boots (string[]) - Queens with bad runways, iconicQueens (string[]) - Queens with iconic moments, cringeQueens (string[]) - Queens with cringe moments, queenOfTheWeek (string[]) - Queen(s) of the week
+// Doc: Args: franchise, season - scope updates to the correct season; toots, boots, iconicQueens, cringeQueens, queenOfTheWeek - survey results
 // Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
-export const weeklySurvey = async (toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]) => {
-    logger.info('LeagueOps.Service.ts: weeklySurvey() - processing weekly survey results', {tootCount: toots.length, bootCount: boots.length, queenOfTheWeek});
+export const weeklySurvey = async (franchise: string, season: number, toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[], bracketName?: BracketName) => {
+    logger.info('LeagueOps.Service.ts: weeklySurvey() - processing weekly survey results', {franchise, season, tootCount: toots.length, bootCount: boots.length, queenOfTheWeek});
     //1. Do point adjustments //
     let weeklySurveyUpdate = weeklySurveyObjectHelper(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
     if(!weeklySurveyUpdate) {
@@ -158,9 +174,25 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
         return null;
     }
 
-    //2. Load all rosters //
+    // Apply bracket filter when bracketName is supplied
+    if (bracketName) {
+        const bracket = await prisma.bracket.findFirst({ where: { franchise, season, bracketName } });
+        if (!bracket) {
+            logger.error('LeagueOps.Service.ts: weeklySurvey() - bracket not found', {franchise, season, bracketName});
+            return null;
+        }
+        const bracketQueens = new Set(bracket.queens);
+        for (const queen of Object.keys(weeklySurveyUpdate)) {
+            if (!bracketQueens.has(queen)) {
+                delete weeklySurveyUpdate[queen];
+            }
+        }
+        logger.debug('LeagueOps.Service.ts: weeklySurvey() - applied bracket filter', {bracketName, bracketQueens: bracket.queens.length});
+    }
+
+    //2. Load rosters scoped to this franchise+season //
     try {
-        let rosters = await getAllRosters();
+        let rosters = await getRostersByFranchiseAndLeague(franchise, season);
         if(!rosters) {
             logger.error("LeagueOps.Service.ts: weeklySurvey() - failed to load rosters from database");
             return null;
@@ -168,32 +200,11 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
         logger.debug('LeagueOps.Service.ts: weeklySurvey() - loaded rosters for survey update', {rosterCount: rosters.length});
         // 3. Handle updates //
         const updatePromises = rosters.map((roster) => {
-            // Calculate how many points this specific user earned this week
-            // based on the queens currently in their roster array
             const pointsEarnedThisWeek = roster.queens.reduce((total, queenName) => {
-                const score = weeklySurveyUpdate[queenName] || 0;
-                return total + score;
+                return total + (weeklySurveyUpdate[queenName] || 0);
             }, 0);
-
-            const pointUpdateArray = [...roster.pointUpdates];
-            if(pointUpdateArray.length > 0) {
-                pointUpdateArray[pointUpdateArray.length-1] += pointsEarnedThisWeek;
-            } else {
-                pointUpdateArray.push(pointsEarnedThisWeek);
-            }
-    
-            return prisma.roster.update({
-                where: { recordId: roster.recordId },
-                    data: {
-                        currentPoints: {
-                            increment: pointsEarnedThisWeek,
-                        },
-                        pointUpdates: {
-                            set: pointUpdateArray,
-                        },
-                    },
-                });
-            }); // updatePromises //
+            return buildMergedPointUpdate(roster, pointsEarnedThisWeek);
+        });
     
         // 3. Execute all updates as a single transaction
         // This is much faster and safer than updating one-by-one in a loop
@@ -209,11 +220,26 @@ export const weeklySurvey = async (toots: string[], boots: string[], iconicQueen
     return null;
 };
 
+// Returns null if selection is valid, or an error message string if a bracket constraint is violated.
+export const validateBracketSelection = async (franchise: string, season: number, queens: string[]): Promise<string | null> => {
+    const activeSeason = await prisma.activeSeasons.findFirst({ where: { franchise, season } });
+    if (!activeSeason?.isUsingBrackets) return null;
+
+    const brackets = await prisma.bracket.findMany({ where: { franchise, season }, orderBy: { bracketName: 'asc' } });
+    for (const bracket of brackets) {
+        const count = queens.filter(q => bracket.queens.includes(q)).length;
+        if (count !== 2) {
+            return `Must select exactly 2 queens from Bracket ${bracket.bracketName} (selected ${count})`;
+        }
+    }
+    return null;
+};
+
 // Doc: Adds a user to a league and creates their roster if there's space and they're not already a member.
 // Doc: Args: email (string) - User email, teamName (string) - Team name, league (League) - League object to join, queens (Array<string>) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
 // Doc: Returns: Promise<Roster | null> - The created roster record or null if user already in league or league is full
 export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>, franchise: string, season: number) => {
-    logger.debug('leageOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
+    logger.debug('leagueOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
     // 1. Check to see if user is already registered for this league.
     const isAlreadyInLeague: boolean = league.users.includes(email);
@@ -282,8 +308,11 @@ export const removeUserFromLeague = async (email: string, league: League) => {
         });
         logger.info('LeagueOps.Service.ts: removeUserFromLeague() - user removed from league users array', {email, leagueName: league.leagueName});
 
-        // 4. Remove the corresponding record from the records table too
-        // TODO.
+        // 4. Remove the corresponding roster record
+        await prisma.roster.deleteMany({
+            where: { leagueName: league.leagueName, username: email },
+        });
+        logger.info('LeagueOps.Service.ts: removeUserFromLeague() - roster record deleted', {email, leagueName: league.leagueName});
     } else {
         logger.error('LeagueOps.Service.ts: removeUserFromLeague() - user not found in league users array', {email, leagueName: league.leagueName});
     }
@@ -298,14 +327,6 @@ export const increaseLeagueSize = async (leagueName: string, newMaxPlayers: numb
         where: { leagueName },
         data: { maxPlayers: newMaxPlayers },
     });
-};
-
-// Doc: TODO: Creates a new roster record (currently not implemented).
-// Doc: Args: leagueName (string) - League name, email (string) - User email, teamName (string) - Team name, queens (string[]) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
-// Doc: Returns: null - Not yet implemented
-export const addNewRoster = (leagueName: string, email: string, teamName: string, queens: string[], franchise: string, season: number) => {
-    logger.error('LeagueOps.Service.ts: addNewRoster() - not yet implemented', {leagueName, email, teamName, franchise, season});
-    return null;
 };
 
 // Doc: Queries the database for all rosters belonging to a specific league.
@@ -355,8 +376,26 @@ export const submitFanSurvey = async (
     });
 };
 
+// Doc: Builds the Prisma update op that increments currentPoints and merges pointsEarned into
+//      the last entry of pointUpdates (survey points share an episode entry with episode points).
+const buildMergedPointUpdate = (roster: Roster, pointsEarned: number) => {
+    const pointUpdateArray = [...roster.pointUpdates];
+    if (pointUpdateArray.length > 0) {
+        pointUpdateArray[pointUpdateArray.length - 1] += pointsEarned;
+    } else {
+        pointUpdateArray.push(pointsEarned);
+    }
+    return prisma.roster.update({
+        where: { recordId: roster.recordId },
+        data: {
+            currentPoints: { increment: pointsEarned },
+            pointUpdates:  { set: pointUpdateArray },
+        },
+    });
+};
+
 // Doc: Helper — counts votes per queen for a given field and returns all queens tied for the plurality.
-const tallyVotes = (responses: any[], field: string): string[] => {
+const tallyVotes = (responses: { [key: string]: unknown }[], field: string): string[] => {
     const counts: Record<string, number> = {};
     responses.forEach(r => {
         const val = r[field] as string;
@@ -370,8 +409,8 @@ const tallyVotes = (responses: any[], field: string): string[] => {
 // Doc: Awards points to all tied queens in the event of a tie. Should be called after the Friday-Thursday survey window closes.
 // Doc: Args: franchise, season, episode - identify the episode to compute
 // Doc: Returns: Promise<Roster[] | null> - Updated roster records or null if no responses found
-export const computeFanSurvey = async (franchise: string, season: number, episode: number) => {
-    logger.info('LeagueOps.Service.ts: computeFanSurvey() - tallying votes', {franchise, season, episode});
+export const computeFanSurvey = async (franchise: string, season: number, episode: number, bracketName?: BracketName) => {
+    logger.info('LeagueOps.Service.ts: computeFanSurvey() - tallying votes', {franchise, season, episode, bracketName});
 
     const responses = await prisma.fanSurveyResponse.findMany({ where: { franchise, season, episode } });
     if (responses.length === 0) {
@@ -389,7 +428,7 @@ export const computeFanSurvey = async (franchise: string, season: number, episod
     logger.info('LeagueOps.Service.ts: computeFanSurvey() - vote results', {queensOfWeek, bottomQueens, lipSyncWins, bestDressed, worstDressed});
 
     // Build score map
-    const scores: Record<string, number> = {};
+    let scores: Record<string, number> = {};
     const addScore = (queens: string[], pts: number) =>
         queens.forEach(q => { scores[q] = (scores[q] || 0) + pts; });
 
@@ -398,6 +437,22 @@ export const computeFanSurvey = async (franchise: string, season: number, episod
     addScore(lipSyncWins,   FanSurveyPoints.LIP_SYNC_WINNER);
     addScore(bestDressed,   FanSurveyPoints.BEST_DRESSED);
     addScore(worstDressed,  FanSurveyPoints.WORST_DRESSED);
+
+    // Apply bracket filter when bracketName is supplied
+    if (bracketName) {
+        const bracket = await prisma.bracket.findFirst({ where: { franchise, season, bracketName } });
+        if (!bracket) {
+            logger.error('LeagueOps.Service.ts: computeFanSurvey() - bracket not found', {franchise, season, bracketName});
+            return null;
+        }
+        const bracketQueens = new Set(bracket.queens);
+        for (const queen of Object.keys(scores)) {
+            if (!bracketQueens.has(queen)) {
+                delete scores[queen];
+            }
+        }
+        logger.debug('LeagueOps.Service.ts: computeFanSurvey() - applied bracket filter', {bracketName, bracketQueens: bracket.queens.length});
+    }
 
     try {
         const rosters = await getRostersByFranchiseAndLeague(franchise, season);
@@ -409,21 +464,7 @@ export const computeFanSurvey = async (franchise: string, season: number, episod
         const updatePromises = rosters.map(roster => {
             const pointsEarned = roster.queens.reduce((total, queenName) =>
                 total + (scores[queenName] || 0), 0);
-
-            const pointUpdateArray = [...roster.pointUpdates];
-            if (pointUpdateArray.length > 0) {
-                pointUpdateArray[pointUpdateArray.length - 1] += pointsEarned;
-            } else {
-                pointUpdateArray.push(pointsEarned);
-            }
-
-            return prisma.roster.update({
-                where: { recordId: roster.recordId },
-                data: {
-                    currentPoints: { increment: pointsEarned },
-                    pointUpdates:  { set: pointUpdateArray }
-                }
-            });
+            return buildMergedPointUpdate(roster, pointsEarned);
         });
 
         const results = await prisma.$transaction(updatePromises);
@@ -431,6 +472,82 @@ export const computeFanSurvey = async (franchise: string, season: number, episod
         return results;
     } catch (error) {
         logger.error('LeagueOps.Service.ts: computeFanSurvey() - transaction failed', {franchise, season, episode, error});
+        return null;
+    }
+};
+
+// Doc: Stores one season finale survey response per user per season.
+// Doc: Args: franchise, season, submittedBy, winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved
+// Doc: Returns: Promise<SeasonFinaleResponse> - The created record
+export const submitSeasonFinale = async (
+    franchise: string, season: number, submittedBy: string,
+    winner: string, runnerUp: string, missCongeniality: string,
+    bestDressed: string, fanFavorite: string, tradeOfTheSeason: string,
+    mostImproved: string
+) => {
+    logger.info('LeagueOps.Service.ts: submitSeasonFinale() - storing response', {franchise, season, submittedBy});
+    return prisma.seasonFinaleResponse.create({
+        data: {
+            franchise, season, submittedBy,
+            winner, runnerUp, missCongeniality,
+            bestDressed, fanFavorite, tradeOfTheSeason,
+            mostImproved,
+        },
+    });
+};
+
+// Doc: Tallies all season finale survey responses, finds the plurality winner per category, and awards points to all rosters.
+// Doc: Args: franchise, season - the season to compute
+// Doc: Returns: Promise<Roster[] | null> - Updated roster records or null if no responses found
+export const computeSeasonFinale = async (franchise: string, season: number) => {
+    logger.info('LeagueOps.Service.ts: computeSeasonFinale() - tallying votes', {franchise, season});
+
+    const responses = await prisma.seasonFinaleResponse.findMany({ where: { franchise, season } });
+    if (responses.length === 0) {
+        logger.error('LeagueOps.Service.ts: computeSeasonFinale() - no responses found', {franchise, season});
+        return null;
+    }
+
+    const winner          = tallyVotes(responses, 'winner');
+    const runnerUp        = tallyVotes(responses, 'runnerUp');
+    const missCongeniality = tallyVotes(responses, 'missCongeniality');
+    const bestDressed     = tallyVotes(responses, 'bestDressed');
+    const fanFavorite     = tallyVotes(responses, 'fanFavorite');
+    const tradeOfTheSeason = tallyVotes(responses, 'tradeOfTheSeason');
+    const mostImproved    = tallyVotes(responses, 'mostImproved');
+
+    logger.info('LeagueOps.Service.ts: computeSeasonFinale() - vote results', {winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved});
+
+    let scores: Record<string, number> = {};
+    const addScore = (queens: string[], pts: number) =>
+        queens.forEach(q => { scores[q] = (scores[q] || 0) + pts; });
+
+    addScore(winner,           LeaguePointAwards.WINNER);
+    addScore(runnerUp,         LeaguePointAwards.RUNNER_UP);
+    addScore(missCongeniality, LeaguePointAwards.MISS_CONGENIALITY);
+    addScore(bestDressed,      LeaguePointAwards.BEST_DRESSED);
+    addScore(fanFavorite,      LeaguePointAwards.FAN_FAVORITE);
+    addScore(tradeOfTheSeason, LeaguePointAwards.TRADE_OF_THE_SEASON);
+    addScore(mostImproved,     LeaguePointAwards.MOST_IMPROVED);
+
+    try {
+        const rosters = await getRostersByFranchiseAndLeague(franchise, season);
+        if (!rosters || rosters.length === 0) {
+            logger.error('LeagueOps.Service.ts: computeSeasonFinale() - no rosters found', {franchise, season});
+            return null;
+        }
+
+        const updatePromises = rosters.map(roster => {
+            const pointsEarned = roster.queens.reduce((total, queenName) =>
+                total + (scores[queenName] || 0), 0);
+            return buildMergedPointUpdate(roster, pointsEarned);
+        });
+
+        const results = await prisma.$transaction(updatePromises);
+        logger.info(`LeagueOps.Service.ts: computeSeasonFinale() - updated ${results.length} rosters`, {franchise, season});
+        return results;
+    } catch (error) {
+        logger.error('LeagueOps.Service.ts: computeSeasonFinale() - transaction failed', {franchise, season, error});
         return null;
     }
 };

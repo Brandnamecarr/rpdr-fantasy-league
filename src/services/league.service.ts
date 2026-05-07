@@ -6,7 +6,7 @@ import logger from "../util/LoggerImpl";
 // Doc: Returns: Promise<League | null> - The league record or null if not found
 export const getLeague = (leaguename: string, franchise: string, season: number) => {
     logger.debug('League.Service.ts: getting league with leaguename: ', {leagueName: leaguename, franchise: franchise, season: season});
-    return prisma.league.findUnique({
+    return prisma.league.findFirst({
         where: {
             leagueName: leaguename,
             franchise: franchise,
@@ -47,30 +47,35 @@ export const getAllLeagues = () => {
 // Doc: Args: leaguename (string) - League name, owner (string) - Owner email, users (Array<string>) - Array of user emails, maxPlayers (number) - Max players allowed, maxQueensPerTeam (number) - Max queens per team, franchise (string) - Franchise name, season (number) - Season number, teamName (string) - Owner's team name, queens (string[]) - Owner's selected queens
 // Doc: Returns: Promise<League | null> - The created league record or null on failure
 export const createLeague = async (leaguename: string, owner: string, users: Array<string>, maxPlayers: number, maxQueensPerTeam: number, franchise: string, season: number, teamName: string, queens: string[]) => {
-    logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename: leaguename, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam});
+    logger.debug('League.Service.ts: creatingLeague with name: ', {leaguename, owner, users, maxPlayers, maxQueensPerTeam});
 
-    const newLeague = await prisma.league.create({
-        data: {
-            leagueName: leaguename,
-            owner: owner,
-            users: users,
-            maxPlayers: maxPlayers,
-            maxQueensPerTeam: maxQueensPerTeam,
-            franchise: franchise,
-            season: season,
-        },
+    const newLeague = await prisma.$transaction(async (tx) => {
+        const league = await tx.league.create({
+            data: {
+                leagueName: leaguename,
+                owner,
+                users,
+                maxPlayers,
+                maxQueensPerTeam,
+                franchise,
+                season,
+            },
+        });
+
+        await tx.roster.create({
+            data: {
+                leagueName: leaguename,
+                franchise,
+                season,
+                teamName,
+                username: owner,
+                queens,
+                currentPoints: 0,
+            },
+        });
+
+        return league;
     });
-
-    if(!newLeague) {
-        logger.error('League.Service.ts: createLeague failed to make new league', {leaguename: leaguename});
-        return null;
-    }
-
-    const newRoster = await makeNewRoster(leaguename, franchise, season, teamName, owner, queens);
-    if(!newRoster) {
-        logger.error('League.Service.ts: createLeague failed to make roster for ', {leaguename: leaguename, email: owner});
-        return null;
-    }
 
     logger.info('League.Service.ts: createLeague() - league and owner roster created successfully', {leaguename, owner, franchise, season});
     return newLeague;

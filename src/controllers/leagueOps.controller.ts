@@ -9,11 +9,11 @@ import {League, User, Roster} from '@prisma/client';
 // Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, maxiWinner: string, isSnatchGame: boolean, miniWinner: string, topQueens: string[], safeQueens: string[], bottomQueens: string[], linSyncWinner: string, eliminated: string[]}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/weekly-update
 export const weeklyUpdate = async (req: Request, res: Response) => {
-    const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated} = req.body;
-    logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, maxiWinner, isSnatchGame, eliminated});
+    const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated, bracketName} = req.body;
+    logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, maxiWinner, isSnatchGame, eliminated, bracketName});
 
     try {
-        const resp = await leagueOpsService.weeklyUpdate(franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated);
+        const resp = await leagueOpsService.weeklyUpdate(franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated, bracketName);
         if(!resp) {
             logger.error('LeagueOps.Controller.ts: Error in weeklyUpdate(), unable to update points');
             return res.status(404).json({Error: 'Error performing weeklyUpdate operations'});
@@ -21,8 +21,8 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
         logger.info('LeagueOps.Controller.ts: successfully updated point totals, returning 201');
         return res.status(201).json(resp);
     } catch (error) {
-        logger.error('LeagueOps.Controller.ts: error in weeklyUpdate(): ', {error:error});
-        return res.status(500).json({error: 'Error processing weekly update'});
+        logger.error('LeagueOps.Controller.ts: error in weeklyUpdate(): ', {error});
+        return res.status(500).json({Error: 'Error processing weekly update'});
     }
 };
 
@@ -30,11 +30,16 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {toots: any[], boots: any[], iconicQueens: any[], cringeQueens: any[], queenOfTheWeek: any}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/weekly-survey
 export const weeklySurvey = async (req: Request, res: Response) => {
-    const {toots, boots, iconicQueens, cringeQueens, queenOfTheWeek} = req.body;
-    logger.info('LeagueOps.Controller.ts: weeklySurvey() - request received', {tootCount: toots?.length, bootCount: boots?.length, queenOfTheWeek});
+    const {franchise, season, toots, boots, iconicQueens, cringeQueens, queenOfTheWeek, bracketName} = req.body;
+    logger.info('LeagueOps.Controller.ts: weeklySurvey() - request received', {franchise, season, tootCount: toots?.length, bootCount: boots?.length, queenOfTheWeek, bracketName});
+
+    if (!franchise || !season) {
+        logger.error('LeagueOps.Controller.ts: weeklySurvey() - missing franchise or season');
+        return res.status(400).json({ Error: 'franchise and season are required' });
+    }
 
     try {
-        let resp = await leagueOpsService.weeklySurvey(toots, boots, iconicQueens, cringeQueens, queenOfTheWeek);
+        let resp = await leagueOpsService.weeklySurvey(franchise, Number(season), toots, boots, iconicQueens, cringeQueens, queenOfTheWeek, bracketName);
         if(!resp) {
             logger.error('LeagueOps.Controller.ts: got back null from weeklySurvey, returning 404');
             return res.status(404).json({Error: "Error with weeklySurvey"});
@@ -42,8 +47,8 @@ export const weeklySurvey = async (req: Request, res: Response) => {
         logger.info('LeagueOps.Controller.ts: successfully performed weeklySurvey update, returning 201');
         return res.status(201).json(resp);
     } catch (error) {
-        logger.debug('leagueOps.Controller.ts: Error with Weekly Survey', {error: error});
-        return res.status(500).json({error: error});
+        logger.error('LeagueOps.Controller.ts: Error with Weekly Survey', {error});
+        return res.status(500).json({Error: 'Error processing weekly survey'});
     }
 };
 
@@ -62,14 +67,22 @@ export const addUserToLeague = async (req: Request, res: Response) => {
         }
         let league: League = result;
         logger.debug('LeagueOps.Controller.ts: Found league: ', {leagueName: league.leagueName});
+
+        // Enforce bracket selection constraints when the season uses brackets
+        const bracketError = await leagueOpsService.validateBracketSelection(league.franchise, league.season, queens);
+        if (bracketError) {
+            logger.error('LeagueOps.Controller.ts: addUserToLeague() - bracket validation failed', {bracketError});
+            return res.status(400).json({ Error: bracketError });
+        }
+
         const resp = await leagueOpsService.addUserToLeague(username, teamName, league, queens, league.franchise, league.season);
         if(!resp) {
             return res.status(400).json({Error: `Error adding ${username} to ${leagueName}`});
         }
         res.status(201).json(resp);
     } catch(error) {
-        logger.error('LeagueOps.Controller.ts: error in addUserToLeague(): ', {error: error});
-        res.status(500).json({error: 'User unable to add to league'});
+        logger.error('LeagueOps.Controller.ts: error in addUserToLeague(): ', {error});
+        res.status(500).json({Error: 'User unable to add to league'});
     }
 };
 
@@ -94,7 +107,7 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
         res.status(200).json(resp);
     } catch (error) {
         logger.error('LeagueOps.Controller.ts: removeUserFromLeague() - unexpected error', {email, leagueName, error});
-        res.status(500).json({error: 'Unable to remove user from league'});
+        res.status(500).json({Error: 'Unable to remove user from league'});
     }
 };
 
@@ -102,26 +115,20 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {email: string, token: string, leagueName: string}, res (Response) - Express response object
 // Doc: Route: Likely GET /league-ops/rosters/league or POST /league-ops/rosters/league
 export const getAllRostersByLeague = async (req: Request, res: Response) => {
-    //i think token gets used in the routes file //
-    // might not need to pass in //
-    const {email, token, leagueName} = req.body;
-    logger.debug('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName: leagueName});
+    const { leagueName } = req.body;
+    logger.debug('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName});
     try {
         const result = await leagueOpsService.getAllRostersByLeague(leagueName);
-        logger.debug('LeagueOps.Controller.ts: Got back result: ', {result: result});
         if(!result) {
-            logger.debug(`LeagueOps.Controller.ts: No rosters found for league ${leagueName}`, {});
-            res.status(404).json({"Error": `"No rosters found for league ${leagueName}"`});
-        } // if //
-        logger.debug('LeagueOps.Controller.ts: Returning 201');
-        res.status(201).json(result);
-    } // try // 
-    catch(error) {
-        logger.error('LeagueOps.Controller.ts: error in getAllRostersByLeague: ', {error: error});
-        res.status(500).json({
-            "Error": {error}
-        });
-    } // catch //
+            logger.debug(`LeagueOps.Controller.ts: No rosters found for league ${leagueName}`);
+            return res.status(404).json({Error: `No rosters found for league ${leagueName}`});
+        }
+        logger.debug('LeagueOps.Controller.ts: Returning rosters for league', {leagueName, count: result.length});
+        res.status(200).json(result);
+    } catch(error) {
+        logger.error('LeagueOps.Controller.ts: error in getAllRostersByLeague: ', {error});
+        res.status(500).json({Error: 'Error fetching rosters for league'});
+    }
 };
 
 // Doc: Retrieves all rosters from the database (for internal/testing purposes).
@@ -133,13 +140,13 @@ export const getAllRosters = async (req: Request, res: Response) => {
         let response = await leagueOpsService.getAllRosters();
         if(!response) {
             logger.error('LeagueOps.Controller.ts: getAllRosters() - no rosters returned from service');
-            res.status(404).json({"Error": "No rosters found in database"});
+            return res.status(404).json({Error: 'No rosters found in database'});
         }
-        logger.debug('LeagueOps.Controller.ts: getAllRosters() - returning all rosters', {count: response?.length});
-        res.status(201).json(response);
+        logger.debug('LeagueOps.Controller.ts: getAllRosters() - returning all rosters', {count: response.length});
+        res.status(200).json(response);
     } catch (error) {
-        logger.error('LeagueOps.Controller.ts: getAllRosters() - unexpected error', {error: error});
-        res.status(500).json({error: error});
+        logger.error('LeagueOps.Controller.ts: getAllRosters() - unexpected error', {error});
+        res.status(500).json({Error: 'Error fetching all rosters'});
     }
 };
 
@@ -164,9 +171,9 @@ export const getRostersByFranchiseAndSeason = async (req: Request, res: Response
             return res.status(404).json({Error: "Error getting rosters from database"});
         }
         logger.debug(`LeagueOps.Controller.ts: got rosters matching franchise and season from table`);
-        res.status(201).json(rosters);
+        res.status(200).json(rosters);
     } catch(error) {
-        logger.error(`LeagueOps.Controller.ts: Error getting rosters by franchise and season`);
+        logger.error(`LeagueOps.Controller.ts: Error getting rosters by franchise and season`, {error});
         res.status(500).json({Error: 'Error getting rosters by franchise and season'});
     }
 };
@@ -206,17 +213,17 @@ export const submitFanSurvey = async (req: Request, res: Response) => {
 // Doc: Body: {franchise, season, episode} — should only be called after the Friday-Thursday window closes.
 // Doc: Route: POST /leagueOps/computeFanSurvey
 export const computeFanSurvey = async (req: Request, res: Response) => {
-    const { franchise, season, episode } = req.body;
+    const { franchise, season, episode, bracketName } = req.body;
 
     if (!franchise || !season || !episode) {
         logger.error('LeagueOps.Controller.ts: computeFanSurvey() - missing required fields');
         return res.status(400).json({ Error: 'franchise, season, and episode are required' });
     }
 
-    logger.info('LeagueOps.Controller.ts: computeFanSurvey() - request received', { franchise, season, episode });
+    logger.info('LeagueOps.Controller.ts: computeFanSurvey() - request received', { franchise, season, episode, bracketName });
 
     try {
-        const resp = await leagueOpsService.computeFanSurvey(franchise, Number(season), Number(episode));
+        const resp = await leagueOpsService.computeFanSurvey(franchise, Number(season), Number(episode), bracketName);
         if (!resp) {
             logger.error('LeagueOps.Controller.ts: computeFanSurvey() - no responses or rosters found');
             return res.status(404).json({ Error: 'No survey responses found for this episode' });
@@ -226,6 +233,39 @@ export const computeFanSurvey = async (req: Request, res: Response) => {
     } catch (error) {
         logger.error('LeagueOps.Controller.ts: computeFanSurvey() - unexpected error', { error });
         return res.status(500).json({ Error: 'Error computing fan survey results' });
+    }
+};
+
+// Doc: Stores one season finale survey response per user per season.
+// Doc: Body: {franchise, season, winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved, snatcGameMvp}
+// Doc: Route: POST /leagueOps/submitSeasonFinale
+export const submitSeasonFinale = async (req: Request, res: Response) => {
+    const { franchise, season, winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved } = req.body;
+    const submittedBy = (req as any).user?.email;
+
+    if (!franchise || !season || !winner || !runnerUp || !missCongeniality || !bestDressed || !fanFavorite || !tradeOfTheSeason || !mostImproved) {
+        logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - missing required fields');
+        return res.status(400).json({ Error: 'All survey fields are required' });
+    }
+
+    logger.info('LeagueOps.Controller.ts: submitSeasonFinale() - request received', { franchise, season, submittedBy });
+
+    try {
+        const resp = await leagueOpsService.submitSeasonFinale(
+            franchise, Number(season), submittedBy,
+            winner, runnerUp, missCongeniality,
+            bestDressed, fanFavorite, tradeOfTheSeason,
+            mostImproved
+        );
+        logger.info('LeagueOps.Controller.ts: submitSeasonFinale() - response stored successfully');
+        return res.status(201).json(resp);
+    } catch (error: any) {
+        if (error?.code === 'P2002') {
+            logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - duplicate submission', { submittedBy, franchise, season });
+            return res.status(409).json({ Error: 'You have already submitted a finale survey for this season' });
+        }
+        logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error submitting season finale survey' });
     }
 };
 
@@ -266,21 +306,3 @@ export const increaseLeagueSize = async (req: Request, res: Response) => {
     }
 };
 
-// Doc: Creates and adds a new roster record to the database.
-// Doc: Args: req (Request) - Express request object with body containing {leagueName: string, email: string, teamName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
-// Doc: Route: Likely POST /league-ops/rosters
-export const addRoster = async (req: Request, res: Response) => {
-    const {leagueName, email, teamName, queens, franchise, season} = req.body;
-    try {
-        let result = await leagueOpsService.addNewRoster(leagueName, email, teamName, queens, franchise, season);
-        if(!result) {
-            logger.error('leagueOps.Controller.ts: error adding new roster record into database');
-            return res.status(404).json({Error: 'Error making new roster obj in database'});
-        }
-        logger.debug('leagueOps.Controller.ts: successfully added new record, returning result: ', {result: result});
-        res.status(201).json(result);
-    } catch(error) {
-        logger.error('leagueOps.Controller.ts: addRoster error: ', {error: error});
-        res.status(500).json({"Error": error});
-    }
-};

@@ -12,14 +12,13 @@ export const getLeague = async (req: Request, res: Response) => {
         const leagueRecord = await leagueService.getLeague(leagueName, franchise, season);
         if(!leagueRecord) {
             logger.error('League.Controller.ts: did not get any records back');
-            return res.status(404).json({"Error":`Did not find any leagues with name ${leagueName}`});
+            return res.status(404).json({Error: `Did not find any leagues with name ${leagueName}`});
         }
-        logger.debug('League.Controller.ts: successfully loaded record from database', {});
+        logger.debug('League.Controller.ts: successfully loaded record from database');
         res.json(leagueRecord);
-    } // try //
-    catch (error) {
-        logger.error('League.Controller.ts: error loading record returning 500: ', {error: error});
-        res.status(500).json({error: 'Error getting league by name'});
+    } catch (error) {
+        logger.error('League.Controller.ts: error loading record returning 500: ', {error});
+        res.status(500).json({Error: 'Error getting league by name'});
     }
 };
 
@@ -30,14 +29,13 @@ export const getAllLeagues = async (req: Request, res: Response) => {
     try {
         const leagues = await leagueService.getAllLeagues();
         if(!leagues) {
-            return res.status(404).json({error: `Didn't find any leagues in database`});
+            return res.status(404).json({Error: `Didn't find any leagues in database`});
         }
-        logger.debug('League.Controller.ts: returning all leagues in getAllLeagues()', {});
+        logger.debug('League.Controller.ts: returning all leagues in getAllLeagues()');
         res.status(200).json(leagues);
-    } // try //
-    catch (error) {
-        logger.error('League.Controller.ts: Error fetching all leagues: ', {error: error});
-        res.status(500).json({error: 'Error getting all leagues'});
+    } catch (error) {
+        logger.error('League.Controller.ts: Error fetching all leagues: ', {error});
+        res.status(500).json({Error: 'Error getting all leagues'});
     }
 };
 
@@ -68,12 +66,11 @@ export const getLeaguesByUser = async (req: Request, res: Response) => {
 export const createLeague = async (req: Request, res: Response) => {
     const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, teamName, franchise, season, queens} = req.body;
 
-    // guard rail to make sure owner ends up in the user array //
     if(!users.includes(owner)) {
         users.push(owner);
     }
 
-    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner: owner, users: users, maxPlayers:maxPlayers, maxQueensPerTeam:maxQueensPerTeam, franchise: franchise, season: season});
+    logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season});
     try {
         const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season, teamName, queens);
         logger.debug('League.Controller.ts: creating league with status 201');

@@ -1,7 +1,7 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
-import { ActivityStatus } from "@prisma/client";
+import { ActivityStatus, BracketName } from "@prisma/client";
 
 // Doc: Queries the database for all active seasons (activityStatus = 'ACTIVE').
 // Doc: Args: None
@@ -12,6 +12,19 @@ export const getActiveSeasons = () => {
         where: {
             activityStatus: 'ACTIVE',
         },
+    });
+};
+
+// Doc: Queries the database for all upcoming seasons (activityStatus = 'INACTIVE').
+// Doc: Args: None
+// Doc: Returns: Promise<ActiveSeasons[]> - Array of inactive/upcoming season records
+export const getUpcomingSeasons = () => {
+    logger.debug('ActiveSeasons.Service.ts: getUpcomingSeasons() - fetching all INACTIVE seasons');
+    return prisma.activeSeasons.findMany({
+        where: {
+            activityStatus: 'INACTIVE',
+        },
+        orderBy: [{ franchise: 'asc' }, { season: 'asc' }],
     });
 };
 
@@ -26,13 +39,30 @@ export const getAllSeasons = () => {
 // Doc: Creates a new season record in the database.
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number
 // Doc: Returns: Promise<ActiveSeasons> - The created season record
-export const addSeason = (franchise: string, season: number) => {
-    logger.info('ActiveSeasons.Service.ts: addSeason() - creating new season record', {franchise, season});
+export const addSeason = (franchise: string, season: number, isUsingBrackets?: boolean, bracketCount?: number) => {
+    logger.info('ActiveSeasons.Service.ts: addSeason() - creating new season record', {franchise, season, isUsingBrackets, bracketCount});
     return prisma.activeSeasons.create({
         data: {
-            franchise: franchise,
-            season: season,
+            franchise,
+            season,
+            ...(isUsingBrackets !== undefined && { isUsingBrackets }),
+            ...(bracketCount !== undefined && { bracketCount }),
         },
+    });
+};
+
+export const addBracket = (franchise: string, season: number, bracketName: BracketName, queens: string[]) => {
+    logger.info('ActiveSeasons.Service.ts: addBracket() - creating bracket record', {franchise, season, bracketName, queensCount: queens.length});
+    return prisma.bracket.create({
+        data: { franchise, season, bracketName, queens },
+    });
+};
+
+export const getBrackets = (franchise: string, season: number) => {
+    logger.debug('ActiveSeasons.Service.ts: getBrackets() - fetching brackets', {franchise, season});
+    return prisma.bracket.findMany({
+        where: { franchise, season },
+        orderBy: { bracketName: 'asc' },
     });
 };
 

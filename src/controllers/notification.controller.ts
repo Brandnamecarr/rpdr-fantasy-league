@@ -10,11 +10,11 @@ export const getUserNotifs = async (req: Request, res: Response) => {
     logger.debug('Notification.Controller.ts: getting allUserNotifs for: ', {email: email});
     try {
         let response = await notifService.getAllByUser(email);
-        logger.debug('Notification.Controller.ts: returning status=201, payload: ', {response: response});
-        res.status(201).json(response);
+        logger.debug('Notification.Controller.ts: returning user notifications', {count: response?.length});
+        res.status(200).json(response);
     } catch(error) {
-        logger.error('Notification.Controller.ts: error with notifications: ', {error: error});
-        res.status(500).json({error: error});
+        logger.error('Notification.Controller.ts: error with notifications: ', {error});
+        res.status(500).json({Error: 'Error fetching notifications'});
     }
 };
 
@@ -28,10 +28,10 @@ export const getAllActiveNotifs = async (req: Request, res: Response) => {
     try {
         let response = await notifService.getAllActiveNotifs(email);
         logger.debug('Notification.Controller.ts: getAllActiveNotifs() - returning active notifications', {email, count: response?.length});
-        res.status(201).json(response);
+        res.status(200).json(response);
     } catch(error) {
         logger.error('Notification.Controller.ts: getAllActiveNotifs() - unexpected error', {email, error});
-        res.status(500).json({error: error});
+        res.status(500).json({Error: 'Error fetching active notifications'});
     }
 };
 
@@ -50,8 +50,8 @@ export const makeNewNotification = async (req: Request, res: Response) => {
             res.status(201).json(response);
         }
     } catch(error) {
-        logger.error('Notification.Controller.ts: makeNewNotification Error: ', {error: error});
-        res.status(500).json({error: error});
+        logger.error('Notification.Controller.ts: makeNewNotification Error: ', {error});
+        res.status(500).json({Error: 'Error creating notification'});
     }
 };
 
@@ -67,9 +67,9 @@ export const updateNotifStatus = async (req: Request, res: Response) => {
             return res.status(500).json({Error: 'Error updating notification', notifId: `${notifId}`});
         }
         logger.debug('Notification.Controller.ts: updateNotifStatus got back: ', {response: response});
-        res.status(201).json({source: 'updateNotifStatus', response: response});
+        res.status(200).json({source: 'updateNotifStatus', response: response});
     } catch(error) {
-        logger.error('Notification.Controller.ts: Error with updateNotifStatus: ', {error: error});
-        res.status(500).json({error: error});
+        logger.error('Notification.Controller.ts: Error with updateNotifStatus: ', {error});
+        res.status(500).json({Error: 'Error updating notification status'});
     }
 };
