@@ -26,7 +26,7 @@ export const getAllEmails = () => {
 // Doc: Args: email (string) - User's email address, password (string) - User's hashed password
 // Doc: Returns: Promise<User> - The created user record
 export const createUser = (email: string, password: string, displayName?: string | null) => {
-    const normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email.toUpperCase();
     logger.debug('User.Service.ts: creating user: ', {email: normalizedEmail});
     return prisma.user.create({
         data: {
@@ -41,7 +41,7 @@ export const createUser = (email: string, password: string, displayName?: string
 // Doc: Args: email (string) - The user's email address
 // Doc: Returns: Promise<User | null> - The user record or null if not found
 export const getUserByName = async (email: string) => {
-    const normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email.toUpperCase();
     logger.debug('User.Service.ts: finding user in database: ', {email: normalizedEmail});
     return prisma.user.findUnique({
         where: {

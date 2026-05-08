@@ -26,6 +26,11 @@ export const getAllActiveNotifs = async (email: string) => {
     });
 };
 
+export const getAllNotifications = () => prisma.notification.findMany();
+
+export const getAllActiveNotifications = () =>
+    prisma.notification.findMany({ where: { resolved: false } });
+
 // Doc: Creates a new notification record in the database.
 // Doc: Args: source (string) - The sender/source of the notification, dest (string) - The destination email address, content (string) - The notification message content
 // Doc: Returns: Promise<Notification | null> - The created notification record or null on error

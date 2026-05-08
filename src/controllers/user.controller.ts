@@ -38,7 +38,7 @@ export const getAllEmails = async (_req: Request, res: Response) => {
 // Doc: Route: Likely POST /users/register or POST /users
 export const createUser = async (req: Request, res: Response) => {
     const {email: rawEmail, password, displayName} = req.body;
-    const email = rawEmail?.toLowerCase();
+    const email = rawEmail?.toUpperCase();
     logger.debug('User.Controller.ts: createUser() called with email: ', {email:email, password:password});
 
     // handle the hashing of the password here //
@@ -58,7 +58,11 @@ export const createUser = async (req: Request, res: Response) => {
             user: user,
             token: token
         }); 
-    } catch(error) {
+    } catch(error: any) {
+        if (error?.code === 'P2002') {
+            logger.error('User.Controller.ts: createUser() - duplicate email', {email});
+            return res.status(409).json({Error: "Email already registered"});
+        }
         logger.error('User.Controller.ts: error creating user, returning 500, error: ', {error:error});
         res.status(500).json({Error: "Failed to create user"});
     }
@@ -89,7 +93,7 @@ export const getUserRecord = async (req: Request, res: Response) => {
 // Doc: Route: Likely POST /users/login or POST /users/auth
 export const authenticateUser = async (req: Request, res: Response) => {
     const {email: rawEmail, password} = req.body;
-    const email = rawEmail?.toLowerCase();
+    const email = rawEmail?.toUpperCase();
     const clientIP = req.ip;
 
     logger.info("User.Controller: authenticateUser() - Authentication attempt initiated", {email, clientIP});

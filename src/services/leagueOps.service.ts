@@ -94,16 +94,12 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
                     return total + score;
                 }, 0);
         
-                // Return the update operation (don't 'await' it yet)
+                const newTotal = Math.max(0, roster.currentPoints + pointsEarnedThisWeek);
                 return prisma.roster.update({
                 where: { recordId: roster.recordId },
                 data: {
-                    currentPoints: {
-                        increment: pointsEarnedThisWeek,
-                    },
-                    pointUpdates: {
-                        push: pointsEarnedThisWeek,
-                    },
+                    currentPoints: { set: newTotal },
+                    pointUpdates: { push: pointsEarnedThisWeek },
                 },
                 });
             }); // updatePromises //
@@ -385,10 +381,11 @@ const buildMergedPointUpdate = (roster: Roster, pointsEarned: number) => {
     } else {
         pointUpdateArray.push(pointsEarned);
     }
+    const newTotal = Math.max(0, roster.currentPoints + pointsEarned);
     return prisma.roster.update({
         where: { recordId: roster.recordId },
         data: {
-            currentPoints: { increment: pointsEarned },
+            currentPoints: { set: newTotal },
             pointUpdates:  { set: pointUpdateArray },
         },
     });

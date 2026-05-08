@@ -2,14 +2,19 @@ import { Request, Response } from "express";
 import * as notifService from '../services/notification.service';
 import logger from "../util/LoggerImpl";
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? '';
+
 // Doc: Retrieves all notifications for a specific user.
 // Doc: Args: req (Request) - Express request object with body containing {email: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /notifications/user or GET /notifications/user
 export const getUserNotifs = async (req: Request, res: Response) => {
+    const requesterEmail = (req as any).user?.email;
     const {email} = req.body;
-    logger.debug('Notification.Controller.ts: getting allUserNotifs for: ', {email: email});
+    logger.debug('Notification.Controller.ts: getting allUserNotifs for: ', {email});
     try {
-        let response = await notifService.getAllByUser(email);
+        const response = requesterEmail === ADMIN_EMAIL
+            ? await notifService.getAllNotifications()
+            : await notifService.getAllByUser(email);
         logger.debug('Notification.Controller.ts: returning user notifications', {count: response?.length});
         res.status(200).json(response);
     } catch(error) {
@@ -22,11 +27,14 @@ export const getUserNotifs = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {email: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /notifications/active or GET /notifications/active
 export const getAllActiveNotifs = async (req: Request, res: Response) => {
+    const requesterEmail = (req as any).user?.email;
     const {email} = req.body;
     logger.debug('Notification.Controller.ts: getAllActiveNotifs() - request received', {email});
 
     try {
-        let response = await notifService.getAllActiveNotifs(email);
+        const response = requesterEmail === ADMIN_EMAIL
+            ? await notifService.getAllActiveNotifications()
+            : await notifService.getAllActiveNotifs(email);
         logger.debug('Notification.Controller.ts: getAllActiveNotifs() - returning active notifications', {email, count: response?.length});
         res.status(200).json(response);
     } catch(error) {
