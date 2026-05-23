@@ -39,7 +39,7 @@ export const getAllSeasons = () => {
 // Doc: Creates a new season record in the database.
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number
 // Doc: Returns: Promise<ActiveSeasons> - The created season record
-export const addSeason = (franchise: string, season: number, isUsingBrackets?: boolean, bracketCount?: number) => {
+export const addSeason = (franchise: string, season: number, isUsingBrackets?: boolean, bracketCount?: number, startDate?: Date, endDate?: Date) => {
     logger.info('ActiveSeasons.Service.ts: addSeason() - creating new season record', {franchise, season, isUsingBrackets, bracketCount});
     return prisma.activeSeasons.create({
         data: {
@@ -47,6 +47,8 @@ export const addSeason = (franchise: string, season: number, isUsingBrackets?: b
             season,
             ...(isUsingBrackets !== undefined && { isUsingBrackets }),
             ...(bracketCount !== undefined && { bracketCount }),
+            ...(startDate !== undefined && { startDate }),
+            ...(endDate !== undefined && { endDate }),
         },
     });
 };
@@ -66,10 +68,10 @@ export const getBrackets = (franchise: string, season: number) => {
     });
 };
 
-// Doc: Updates the activity status of a season in the database.
+// Doc: Updates the activity status (and optionally dates) of a season in the database.
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number, status (ActivityStatus) - The new activity status
 // Doc: Returns: Promise<ActiveSeasons> - The updated season record
-export const updateSeason = async (franchise: string, season: number, status: ActivityStatus) => {
+export const updateSeason = async (franchise: string, season: number, status: ActivityStatus, startDate?: Date, endDate?: Date) => {
     logger.info('ActiveSeasons.Service.ts: updateSeason() - updating season status', {franchise, season, newStatus: status});
     return await prisma.activeSeasons.update({
         where: {
@@ -80,6 +82,30 @@ export const updateSeason = async (franchise: string, season: number, status: Ac
         },
         data: {
             activityStatus: status,
+            ...(startDate !== undefined && { startDate }),
+            ...(endDate !== undefined && { endDate }),
+        },
+    });
+};
+
+export const getSeasonRecord = (franchise: string, season: number) => {
+    return prisma.activeSeasons.findUnique({
+        where: { franchise_season: { franchise, season } },
+    });
+};
+
+// Doc: Returns ACTIVE seasons where today falls within the last 7 days before endDate.
+export const getFinaleEligibleSeasons = () => {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now);
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    return prisma.activeSeasons.findMany({
+        where: {
+            activityStatus: 'ACTIVE',
+            endDate: {
+                gte: now,
+                lte: sevenDaysFromNow,
+            },
         },
     });
 };

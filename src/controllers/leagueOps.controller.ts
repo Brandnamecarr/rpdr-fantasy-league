@@ -2,18 +2,18 @@ import { Request, Response } from "express";
 import * as leagueOpsService from '../services/leagueOps.service';
 import logger from "../util/LoggerImpl";
 import * as leagueService from '../services/league.service';
+import { getSeasonRecord } from '../services/activeSeasons.service';
 
 import {League, User, Roster} from '@prisma/client';
 
 // Doc: Processes weekly episode results and updates point totals for all affected rosters.
-// Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, maxiWinner: string, isSnatchGame: boolean, miniWinner: string, topQueens: string[], safeQueens: string[], bottomQueens: string[], linSyncWinner: string, eliminated: string[]}, res (Response) - Express response object
-// Doc: Route: Likely POST /league-ops/weekly-update
+// Doc: Body: {franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName?}
 export const weeklyUpdate = async (req: Request, res: Response) => {
-    const {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated, bracketName} = req.body;
-    logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, maxiWinner, isSnatchGame, eliminated, bracketName});
+    const {franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName} = req.body;
+    logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, episode, maxiWinner, isSnatchGame, eliminated, bracketName});
 
     try {
-        const resp = await leagueOpsService.weeklyUpdate(franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated, bracketName);
+        const resp = await leagueOpsService.weeklyUpdate(franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName);
         if(!resp) {
             logger.error('LeagueOps.Controller.ts: Error in weeklyUpdate(), unable to update points');
             return res.status(404).json({Error: 'Error performing weeklyUpdate operations'});
@@ -180,6 +180,48 @@ export const getRostersByFranchiseAndSeason = async (req: Request, res: Response
 
 // Doc: Stores an individual fan survey response for a specific episode.
 // Doc: Body: {franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed}
+// Doc: Opens (or updates) a fan survey window for a franchise/season/episode. Called by the tools after copying episode images.
+// Doc: Body: {franchise, season, episode, startDate?, endDate?} — startDate defaults to now, endDate defaults to 7 days from now.
+// Doc: Route: POST /leagueOps/openFanSurvey
+export const openFanSurvey = async (req: Request, res: Response) => {
+    const { franchise, season, episode, startDate, endDate } = req.body;
+
+    if (!franchise || !season || !episode) {
+        logger.error('LeagueOps.Controller.ts: openFanSurvey() - missing required fields');
+        return res.status(400).json({ Error: 'franchise, season, and episode are required' });
+    }
+
+    const start = startDate ? new Date(startDate) : new Date();
+    const end   = endDate   ? new Date(endDate)   : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    logger.info('LeagueOps.Controller.ts: openFanSurvey() - request received', { franchise, season, episode, start, end });
+
+    try {
+        const survey = await leagueOpsService.openFanSurvey(franchise, Number(season), Number(episode), start, end);
+        return res.status(200).json(survey);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: openFanSurvey() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error opening fan survey' });
+    }
+};
+
+// Doc: Returns all currently-open fan surveys for which the requesting user has a roster (i.e., is participating).
+// Doc: Each record includes a hasVoted flag.
+// Doc: Route: GET /leagueOps/getOpenSurveys
+export const getOpenSurveys = async (req: Request, res: Response) => {
+    const email = (req as any).user?.email;
+
+    logger.info('LeagueOps.Controller.ts: getOpenSurveys() - request received', { email });
+
+    try {
+        const surveys = await leagueOpsService.getOpenSurveysForUser(email);
+        return res.status(200).json(surveys);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: getOpenSurveys() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error fetching open surveys' });
+    }
+};
+
 // Doc: Route: POST /leagueOps/submitFanSurvey
 export const submitFanSurvey = async (req: Request, res: Response) => {
     const { franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed } = req.body;
@@ -200,6 +242,15 @@ export const submitFanSurvey = async (req: Request, res: Response) => {
         logger.info('LeagueOps.Controller.ts: submitFanSurvey() - response stored successfully');
         return res.status(201).json(resp);
     } catch (error: any) {
+        if (error?.message === 'SURVEY_NOT_FOUND') {
+            return res.status(404).json({ Error: 'No survey is open for this episode' });
+        }
+        if (error?.message === 'SURVEY_CLOSED') {
+            return res.status(403).json({ Error: 'The survey window for this episode is closed' });
+        }
+        if (error?.message === 'NOT_ELIGIBLE') {
+            return res.status(403).json({ Error: 'You are not participating in a league for this franchise and season' });
+        }
         if (error?.code === 'P2002') {
             logger.error('LeagueOps.Controller.ts: submitFanSurvey() - duplicate submission', { submittedBy, franchise, season, episode });
             return res.status(409).json({ Error: 'You have already submitted a survey for this episode' });
@@ -224,6 +275,10 @@ export const computeFanSurvey = async (req: Request, res: Response) => {
 
     try {
         const resp = await leagueOpsService.computeFanSurvey(franchise, Number(season), Number(episode), bracketName);
+        if (resp === 'ALREADY_COMPUTED') {
+            logger.info('LeagueOps.Controller.ts: computeFanSurvey() - survey already computed', { franchise, season, episode });
+            return res.status(200).json({ message: 'Survey results already computed for this episode' });
+        }
         if (!resp) {
             logger.error('LeagueOps.Controller.ts: computeFanSurvey() - no responses or rosters found');
             return res.status(404).json({ Error: 'No survey responses found for this episode' });
@@ -251,6 +306,18 @@ export const submitSeasonFinale = async (req: Request, res: Response) => {
     logger.info('LeagueOps.Controller.ts: submitSeasonFinale() - request received', { franchise, season, submittedBy });
 
     try {
+        const seasonRecord = await getSeasonRecord(franchise, Number(season));
+        if (seasonRecord?.endDate) {
+            const now = new Date();
+            const endDate = new Date(seasonRecord.endDate);
+            const windowStart = new Date(endDate);
+            windowStart.setDate(windowStart.getDate() - 7);
+            if (now < windowStart || now > endDate) {
+                logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - outside survey window', { franchise, season, now, windowStart, endDate });
+                return res.status(403).json({ Error: 'The Season Finale Survey is not currently open for this season' });
+            }
+        }
+
         const resp = await leagueOpsService.submitSeasonFinale(
             franchise, Number(season), submittedBy,
             winner, runnerUp, missCongeniality,
@@ -266,6 +333,38 @@ export const submitSeasonFinale = async (req: Request, res: Response) => {
         }
         logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - unexpected error', { error });
         return res.status(500).json({ Error: 'Error submitting season finale survey' });
+    }
+};
+
+// Doc: Returns all EpisodeResult records for a franchise/season, ordered by episode.
+// Doc: Query: ?franchise=&season=
+export const getEpisodeHistory = async (req: Request, res: Response) => {
+    const { franchise, season } = req.query;
+    if (!franchise || !season) {
+        return res.status(400).json({ Error: 'franchise and season are required' });
+    }
+    try {
+        const results = await leagueOpsService.getEpisodeHistory(String(franchise), Number(season));
+        return res.status(200).json(results);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: getEpisodeHistory() - error', { error });
+        return res.status(500).json({ Error: 'Error fetching episode history' });
+    }
+};
+
+// Doc: Returns backend-tallied fan survey results per episode (plurality winner per category).
+// Doc: Query: ?franchise=&season=
+export const getTalliedFanSurveyResults = async (req: Request, res: Response) => {
+    const { franchise, season } = req.query;
+    if (!franchise || !season) {
+        return res.status(400).json({ Error: 'franchise and season are required' });
+    }
+    try {
+        const results = await leagueOpsService.getTalliedFanSurveyResults(String(franchise), Number(season));
+        return res.status(200).json(results);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: getTalliedFanSurveyResults() - error', { error });
+        return res.status(500).json({ Error: 'Error fetching fan survey results' });
     }
 };
 

@@ -46,11 +46,11 @@ const weeklyUpdateObjectHelper = (maxiWinner: string[], isSnatchGame: boolean, m
     };
 
 // Doc: Processes weekly episode results and updates all affected rosters' points using a database transaction.
-// Doc: Args: franchise (string) - Franchise name, season (number) - Season number, maxiWinner (string[]) - Maxi challenge winners, isSnatchGame (boolean) - Whether episode is Snatch Game, miniWinner (string[]) - Mini challenge winners, topQueens (string[]) - Top placement queens, safeQueens (string[]) - Safe queens, bottomQueens (string[]) - Bottom placement queens, lipSyncWinner (string[]) - Lip sync winners, eliminated (string[]) - Eliminated queens
+// Doc: Args: franchise, season, episode - identify the episode; maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated - episode result data; bracketName - optional bracket filter
 // Doc: Returns: Promise<Roster[] | null> - Array of updated roster records or null on failure
-export const weeklyUpdate = async (franchise: string, season: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[],
+export const weeklyUpdate = async (franchise: string, season: number, episode: number, maxiWinner: string[], isSnatchGame: boolean, miniWinner: string[], topQueens: string[],
     safeQueens: string[], bottomQueens: string[], lipSyncWinner: string[], eliminated: string[], bracketName?: BracketName) => {
-        logger.info('LeagueOps.Service.ts: weeklyUpdate() - processing weekly episode results', {franchise, season, maxiWinner, isSnatchGame, eliminated, bracketName});
+        logger.info('LeagueOps.Service.ts: weeklyUpdate() - processing weekly episode results', {franchise, season, episode, maxiWinner, isSnatchGame, eliminated, bracketName});
 
         // make weeklyQueenUpdateScores object:
         let weeklyQueenScores = weeklyUpdateObjectHelper(maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated);
@@ -107,10 +107,26 @@ export const weeklyUpdate = async (franchise: string, season: number, maxiWinner
             // 3. Execute all updates as a single transaction
             // This is much faster and safer than updating one-by-one in a loop
             const results = await prisma.$transaction(updatePromises);
-        
+
             logger.info(`LeagueOps.Service.ts: Just updated ${results.length} records`);
+
+            await prisma.episodeResult.upsert({
+                where: { franchise_season_episode: { franchise, season, episode } },
+                create: { franchise, season, episode, maxiWinner, topQueens, eliminated, lipSyncWinner, isSnatchGame },
+                update: { maxiWinner, topQueens, eliminated, lipSyncWinner, isSnatchGame },
+            });
+            logger.info('LeagueOps.Service.ts: weeklyUpdate() - episode result saved', {franchise, season, episode});
+
+            if (eliminated.length > 0) {
+                await prisma.queen.updateMany({
+                    where: { franchise, season, name: { in: eliminated } },
+                    data: { status: QueenStatus.ELIMINATED },
+                });
+                logger.info('LeagueOps.Service.ts: weeklyUpdate() - marked queens as ELIMINATED in DB', { eliminated });
+            }
+
             return results;
-        
+
         } catch (error) {
           logger.error(`LeagueOps.Service.ts: weeklyUpdate() - transaction failed`, {franchise, season, error});
           return null;
@@ -358,17 +374,69 @@ export const getRostersByFranchiseAndLeague = (franchise: string, season: number
     });
 };
 
-// Doc: Stores an individual fan survey response. Enforces one submission per user per episode via a unique constraint.
-// Doc: Args: franchise, season, episode - identify the episode; submittedBy - user email; queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed - selected queen names
-// Doc: Returns: Promise<FanSurveyResponse> - The created response record, or throws if user already submitted
+// Doc: Creates or updates a FanSurvey record to open a survey window for an episode.
+// Doc: Args: franchise, season, episode, startDate, endDate
+// Doc: Returns: The upserted FanSurvey record
+export const openFanSurvey = async (
+    franchise: string, season: number, episode: number, startDate: Date, endDate: Date
+) => {
+    logger.info('LeagueOps.Service.ts: openFanSurvey() - opening survey', {franchise, season, episode, startDate, endDate});
+    return prisma.fanSurvey.upsert({
+        where: { franchise_season_episode: { franchise, season, episode } },
+        create: { franchise, season, episode, startDate, endDate },
+        update: { startDate, endDate },
+    });
+};
+
+// Doc: Returns open FanSurvey records for the franchise/seasons the user currently participates in,
+//      each decorated with a hasVoted flag indicating whether the user has already submitted.
+export const getOpenSurveysForUser = async (email: string) => {
+    logger.info('LeagueOps.Service.ts: getOpenSurveysForUser() - fetching open surveys', {email});
+    const now = new Date();
+
+    const rosters = await prisma.roster.findMany({ where: { username: email }, select: { franchise: true, season: true } });
+    if (rosters.length === 0) return [];
+
+    const openSurveys = await prisma.fanSurvey.findMany({
+        where: {
+            OR: rosters.map(r => ({ franchise: r.franchise, season: r.season })),
+            startDate: { lte: now },
+            endDate:   { gte: now },
+        },
+        include: {
+            responses: { where: { submittedBy: email }, select: { id: true } },
+        },
+        orderBy: { episode: 'desc' },
+    });
+
+    return openSurveys.map(({ responses, ...survey }) => ({
+        ...survey,
+        hasVoted: responses.length > 0,
+    }));
+};
+
+// Doc: Stores an individual fan survey response after verifying the survey is open and the user participates in that franchise/season.
+// Doc: Throws 'SURVEY_NOT_FOUND', 'SURVEY_CLOSED', 'NOT_ELIGIBLE', or a Prisma P2002 for duplicate submissions.
 export const submitFanSurvey = async (
     franchise: string, season: number, episode: number, submittedBy: string,
     queenOfTheWeek: string, bottomOfTheWeek: string, lipSyncWinner: string,
     bestDressed: string, worstDressed: string
 ) => {
     logger.info('LeagueOps.Service.ts: submitFanSurvey() - storing fan survey response', {franchise, season, episode, submittedBy});
-    return prisma.fanSurveyResponse.create({
-        data: { franchise, season, episode, submittedBy, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed }
+
+    const now = new Date();
+
+    const survey = await prisma.fanSurvey.findUnique({
+        where: { franchise_season_episode: { franchise, season, episode } },
+    });
+    if (!survey) throw new Error('SURVEY_NOT_FOUND');
+    if (now < survey.startDate || now > survey.endDate) throw new Error('SURVEY_CLOSED');
+
+    const roster = await prisma.roster.findFirst({ where: { username: submittedBy, franchise, season } });
+    if (!roster) throw new Error('NOT_ELIGIBLE');
+
+    return prisma.fanSurveyData.create({
+        data: { surveyId: survey.id, franchise, season, episode, submittedBy, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed },
     });
 };
 
@@ -403,13 +471,21 @@ const tallyVotes = (responses: { [key: string]: unknown }[], field: string): str
 };
 
 // Doc: Tallies all fan survey responses for an episode, finds the plurality winner(s) per category, and adjusts all roster points accordingly.
-// Doc: Awards points to all tied queens in the event of a tie. Should be called after the Friday-Thursday survey window closes.
+// Doc: Awards points to all tied queens in the event of a tie. Safe to call only once — guards via the computed flag on FanSurvey.
 // Doc: Args: franchise, season, episode - identify the episode to compute
-// Doc: Returns: Promise<Roster[] | null> - Updated roster records or null if no responses found
+// Doc: Returns: Promise<Roster[] | null> - Updated roster records, null if no responses/rosters, or 'ALREADY_COMPUTED' string sentinel
 export const computeFanSurvey = async (franchise: string, season: number, episode: number, bracketName?: BracketName) => {
     logger.info('LeagueOps.Service.ts: computeFanSurvey() - tallying votes', {franchise, season, episode, bracketName});
 
-    const responses = await prisma.fanSurveyResponse.findMany({ where: { franchise, season, episode } });
+    const survey = await prisma.fanSurvey.findUnique({
+        where: { franchise_season_episode: { franchise, season, episode } },
+    });
+    if (survey?.computed) {
+        logger.info('LeagueOps.Service.ts: computeFanSurvey() - already computed, skipping', {franchise, season, episode});
+        return 'ALREADY_COMPUTED' as const;
+    }
+
+    const responses = await prisma.fanSurveyData.findMany({ where: { franchise, season, episode } });
     if (responses.length === 0) {
         logger.error('LeagueOps.Service.ts: computeFanSurvey() - no responses found for episode', {franchise, season, episode});
         return null;
@@ -466,6 +542,15 @@ export const computeFanSurvey = async (franchise: string, season: number, episod
 
         const results = await prisma.$transaction(updatePromises);
         logger.info(`LeagueOps.Service.ts: computeFanSurvey() - updated ${results.length} rosters`, {franchise, season, episode});
+
+        if (survey) {
+            await prisma.fanSurvey.update({
+                where: { id: survey.id },
+                data: { computed: true },
+            });
+            logger.info('LeagueOps.Service.ts: computeFanSurvey() - marked survey as computed', {franchise, season, episode});
+        }
+
         return results;
     } catch (error) {
         logger.error('LeagueOps.Service.ts: computeFanSurvey() - transaction failed', {franchise, season, episode, error});
@@ -491,6 +576,57 @@ export const submitSeasonFinale = async (
             mostImproved,
         },
     });
+};
+
+// Doc: Returns all EpisodeResult records for a franchise/season, ordered by episode ascending.
+export const getEpisodeHistory = async (franchise: string, season: number) => {
+    logger.info('LeagueOps.Service.ts: getEpisodeHistory() - fetching episode results', {franchise, season});
+    return prisma.episodeResult.findMany({
+        where: { franchise, season },
+        orderBy: { episode: 'asc' },
+    });
+};
+
+export interface TalliedEpisodeSurvey {
+    episode: number;
+    queenOfTheWeek: string[];
+    bottomOfTheWeek: string[];
+    lipSyncWinner: string[];
+    bestDressed: string[];
+    worstDressed: string[];
+}
+
+// Doc: Returns backend-tallied fan survey results per episode (plurality winner per category).
+// Doc: Only includes episodes whose survey window has closed (endDate in the past).
+export const getTalliedFanSurveyResults = async (franchise: string, season: number): Promise<TalliedEpisodeSurvey[]> => {
+    logger.info('LeagueOps.Service.ts: getTalliedFanSurveyResults() - tallying fan survey responses', {franchise, season});
+    const now = new Date();
+    const closedSurveys = await prisma.fanSurvey.findMany({
+        where: { franchise, season, endDate: { lt: now } },
+        select: { episode: true },
+    });
+    const closedEpisodes = closedSurveys.map(s => s.episode);
+    if (closedEpisodes.length === 0) return [];
+
+    const responses = await prisma.fanSurveyData.findMany({
+        where: { franchise, season, episode: { in: closedEpisodes } },
+        orderBy: { episode: 'asc' },
+    });
+
+    const byEpisode = new Map<number, typeof responses>();
+    responses.forEach(r => {
+        if (!byEpisode.has(r.episode)) byEpisode.set(r.episode, []);
+        byEpisode.get(r.episode)!.push(r);
+    });
+
+    return Array.from(byEpisode.entries()).map(([episode, eps]) => ({
+        episode,
+        queenOfTheWeek:  tallyVotes(eps, 'queenOfTheWeek'),
+        bottomOfTheWeek: tallyVotes(eps, 'bottomOfTheWeek'),
+        lipSyncWinner:   tallyVotes(eps, 'lipSyncWinner'),
+        bestDressed:     tallyVotes(eps, 'bestDressed'),
+        worstDressed:    tallyVotes(eps, 'worstDressed'),
+    }));
 };
 
 // Doc: Tallies all season finale survey responses, finds the plurality winner per category, and awards points to all rosters.

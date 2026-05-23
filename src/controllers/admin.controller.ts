@@ -11,7 +11,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
     logger.info('Admin.Controller.ts: dumpDatabase() - starting full database dump');
 
     try {
-        const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveyResponses, seasonFinaleResponses] =
+        const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses] =
             await Promise.all([
                 prisma.user.findMany(),
                 prisma.league.findMany(),
@@ -20,7 +20,8 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
                 prisma.queen.findMany(),
                 prisma.activeSeasons.findMany(),
                 prisma.bracket.findMany(),
-                prisma.fanSurveyResponse.findMany(),
+                prisma.fanSurvey.findMany(),
+                prisma.fanSurveyData.findMany(),
                 prisma.seasonFinaleResponse.findMany(),
             ]);
 
@@ -37,7 +38,8 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
                 queens:                 { count: queens.length,                 records: queens },
                 activeSeasons:          { count: activeSeasons.length,          records: activeSeasons },
                 brackets:               { count: brackets.length,               records: brackets },
-                fanSurveyResponses:     { count: fanSurveyResponses.length,     records: fanSurveyResponses },
+                fanSurveys:             { count: fanSurveys.length,             records: fanSurveys },
+                fanSurveyData:          { count: fanSurveyData.length,          records: fanSurveyData },
                 seasonFinaleResponses:  { count: seasonFinaleResponses.length,  records: seasonFinaleResponses },
             },
         };
@@ -71,7 +73,8 @@ export const restoreDatabase = async (req: Request, res: Response) => {
         queens               = { records: [] },
         activeSeasons        = { records: [] },
         brackets             = { records: [] },
-        fanSurveyResponses   = { records: [] },
+        fanSurveys           = { records: [] },
+        fanSurveyData        = { records: [] },
         seasonFinaleResponses = { records: [] },
     } = tables;
 
@@ -79,10 +82,11 @@ export const restoreDatabase = async (req: Request, res: Response) => {
         // Placeholder hash for restored users — passwords were stripped from the dump.
         const placeholderPassword = await bcrypt.hash('RESTORE_PLACEHOLDER', 10);
 
-        // Wipe every table first.
+        // Wipe every table first (child tables before parents to respect FK constraints).
         await prisma.$transaction([
             prisma.seasonFinaleResponse.deleteMany(),
-            prisma.fanSurveyResponse.deleteMany(),
+            prisma.fanSurveyData.deleteMany(),
+            prisma.fanSurvey.deleteMany(),
             prisma.bracket.deleteMany(),
             prisma.activeSeasons.deleteMany(),
             prisma.queen.deleteMany(),
@@ -118,8 +122,12 @@ export const restoreDatabase = async (req: Request, res: Response) => {
         if (brackets.records.length > 0) {
             await prisma.bracket.createMany({ data: brackets.records });
         }
-        if (fanSurveyResponses.records.length > 0) {
-            await prisma.fanSurveyResponse.createMany({ data: fanSurveyResponses.records });
+        // FanSurvey must be restored before FanSurveyData (FK dependency)
+        if (fanSurveys.records.length > 0) {
+            await prisma.fanSurvey.createMany({ data: fanSurveys.records });
+        }
+        if (fanSurveyData.records.length > 0) {
+            await prisma.fanSurveyData.createMany({ data: fanSurveyData.records });
         }
         if (seasonFinaleResponses.records.length > 0) {
             await prisma.seasonFinaleResponse.createMany({ data: seasonFinaleResponses.records });
@@ -133,7 +141,8 @@ export const restoreDatabase = async (req: Request, res: Response) => {
         await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Queen"', 'queenId'), COALESCE((SELECT MAX("queenId") FROM "Queen"), 1))`;
         await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"ActiveSeasons"', 'seasonId'), COALESCE((SELECT MAX("seasonId") FROM "ActiveSeasons"), 1))`;
         await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Bracket"', 'bracketId'), COALESCE((SELECT MAX("bracketId") FROM "Bracket"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"FanSurveyResponse"', 'id'), COALESCE((SELECT MAX(id) FROM "FanSurveyResponse"), 1))`;
+        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"FanSurvey"', 'id'), COALESCE((SELECT MAX(id) FROM "FanSurvey"), 1))`;
+        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"FanSurveyData"', 'id'), COALESCE((SELECT MAX(id) FROM "FanSurveyData"), 1))`;
         await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"SeasonFinaleResponse"', 'id'), COALESCE((SELECT MAX(id) FROM "SeasonFinaleResponse"), 1))`;
 
         logger.info('Admin.Controller.ts: restoreDatabase() - restore complete');

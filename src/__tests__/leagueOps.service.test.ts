@@ -10,13 +10,21 @@ jest.mock('../db/prisma.client', () => ({
             findMany: jest.fn(),
             update: jest.fn(),
             create: jest.fn(),
+            deleteMany: jest.fn().mockResolvedValue({}),
         },
         league: {
             update: jest.fn(),
         },
-        fanSurveyResponse: {
+        fanSurvey: {
+            findUnique: jest.fn().mockResolvedValue(null),
+            update: jest.fn().mockResolvedValue({}),
+        },
+        fanSurveyData: {
             findMany: jest.fn(),
             create: jest.fn(),
+        },
+        episodeResult: {
+            upsert: jest.fn().mockResolvedValue({}),
         },
         $transaction: jest.fn(),
     },
@@ -34,9 +42,11 @@ import { PointManipulation, FanSurveyPoints } from '../enums/enums';
 
 // Typed convenience reference to the prisma mock
 const p = prisma as unknown as {
-    roster: { findMany: jest.Mock; update: jest.Mock; create: jest.Mock };
+    roster: { findMany: jest.Mock; update: jest.Mock; create: jest.Mock; deleteMany: jest.Mock };
     league: { update: jest.Mock };
-    fanSurveyResponse: { findMany: jest.Mock; create: jest.Mock };
+    fanSurvey: { findUnique: jest.Mock; update: jest.Mock };
+    fanSurveyData: { findMany: jest.Mock; create: jest.Mock };
+    episodeResult: { upsert: jest.Mock };
     $transaction: jest.Mock;
 };
 
@@ -81,13 +91,14 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['Sasha'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, ['Sasha'], false, [], [], [], [], [], []);
+        await weeklyUpdate('US', 17, 1, ['Sasha'], false, [], [], [], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 where: { recordId: 1 },
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.MAXI_CHALLENGE_WIN },
+                    currentPoints: { set: PointManipulation.MAXI_CHALLENGE_WIN },
+                    pointUpdates: { push: PointManipulation.MAXI_CHALLENGE_WIN },
                 }),
             })
         );
@@ -97,12 +108,13 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['Katya'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, ['Katya'], true, [], [], [], [], [], []);
+        await weeklyUpdate('US', 17, 1, ['Katya'], true, [], [], [], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.SNATCH_GAME_WIN },
+                    currentPoints: { set: PointManipulation.SNATCH_GAME_WIN },
+                    pointUpdates: { push: PointManipulation.SNATCH_GAME_WIN },
                 }),
             })
         );
@@ -112,12 +124,14 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['Aja'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, [], false, [], [], [], [], [], ['Aja']);
+        await weeklyUpdate('US', 17, 1, [], false, [], [], [], [], [], ['Aja']);
 
+        // currentPoints clamps to 0 (max(0, 0 + -15)); pointUpdates records the actual delta
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.ELIMINATED },
+                    currentPoints: { set: 0 },
+                    pointUpdates: { push: PointManipulation.ELIMINATED },
                 }),
             })
         );
@@ -128,13 +142,14 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['Nina'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, [], false, ['Nina'], [], ['Nina'], [], [], []);
+        await weeklyUpdate('US', 17, 1, [], false, ['Nina'], [], ['Nina'], [], [], []);
 
         const expected = PointManipulation.SAFE_PLACEMENT + PointManipulation.MINI_CHALLENGE_WIN;
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: expected },
+                    currentPoints: { set: expected },
+                    pointUpdates: { push: expected },
                 }),
             })
         );
@@ -145,12 +160,13 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['Trinity'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, ['Trinity'], false, [], ['Trinity'], [], [], [], []);
+        await weeklyUpdate('US', 17, 1, ['Trinity'], false, [], ['Trinity'], [], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.MAXI_CHALLENGE_WIN },
+                    currentPoints: { set: PointManipulation.MAXI_CHALLENGE_WIN },
+                    pointUpdates: { push: PointManipulation.MAXI_CHALLENGE_WIN },
                 }),
             })
         );
@@ -160,12 +176,13 @@ describe('weeklyUpdate', () => {
         const roster = makeRoster({ queens: ['UnknownQueen'] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        await weeklyUpdate('US', 17, ['Sasha'], false, [], ['Trinity'], ['Nina'], [], [], []);
+        await weeklyUpdate('US', 17, 1, ['Sasha'], false, [], ['Trinity'], ['Nina'], [], [], []);
 
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: 0 },
+                    currentPoints: { set: 0 },
+                    pointUpdates: { push: 0 },
                 }),
             })
         );
@@ -174,7 +191,7 @@ describe('weeklyUpdate', () => {
     it('returns null when no rosters are found', async () => {
         p.roster.findMany.mockResolvedValue(null);
 
-        const result = await weeklyUpdate('US', 17, [], false, [], [], [], [], [], []);
+        const result = await weeklyUpdate('US', 17, 1, [], false, [], [], [], [], [], []);
 
         expect(result).toBeNull();
     });
@@ -189,10 +206,12 @@ describe('weeklySurvey', () => {
 
         await weeklySurvey('USA', 18, ['Shea'], [], [], [], []);
 
+        // roster starts currentPoints:0, pointUpdates:[10]; earned=20 → newTotal=20, pointUpdates=[30]
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.GOOD_RUNWAY },
+                    currentPoints: { set: PointManipulation.GOOD_RUNWAY },
+                    pointUpdates: { set: [10 + PointManipulation.GOOD_RUNWAY] },
                 }),
             })
         );
@@ -204,10 +223,12 @@ describe('weeklySurvey', () => {
 
         await weeklySurvey('USA', 18, [], ['Alexis'], [], [], []);
 
+        // roster starts currentPoints:0, pointUpdates:[5]; earned=-5 → newTotal=max(0,-5)=0, pointUpdates=[0]
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: PointManipulation.BAD_RUNWAY },
+                    currentPoints: { set: 0 },
+                    pointUpdates: { set: [5 + PointManipulation.BAD_RUNWAY] },
                 }),
             })
         );
@@ -217,14 +238,15 @@ describe('weeklySurvey', () => {
         const roster = makeRoster({ queens: ['Monet'], pointUpdates: [0] });
         p.roster.findMany.mockResolvedValue([roster]);
 
-        // Toot (20) + Iconic (15) = 35
+        // Toot (20) + Iconic (15) = 35; roster starts currentPoints:0, pointUpdates:[0] → newTotal=35, pointUpdates=[35]
         await weeklySurvey('USA', 18, ['Monet'], [], ['Monet'], [], []);
 
         const expected = PointManipulation.GOOD_RUNWAY + PointManipulation.ICONIC_MOMENT;
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: expected },
+                    currentPoints: { set: expected },
+                    pointUpdates: { set: [0 + expected] },
                 }),
             })
         );
@@ -304,7 +326,8 @@ describe('removeUserFromLeague', () => {
 
 describe('computeFanSurvey', () => {
     it('returns null when there are no survey responses', async () => {
-        p.fanSurveyResponse.findMany.mockResolvedValue([]);
+        p.fanSurvey.findUnique.mockResolvedValue({ id: 1, computed: false });
+        p.fanSurveyData.findMany.mockResolvedValue([]);
 
         const result = await computeFanSurvey('US', 17, 1);
 
@@ -316,7 +339,8 @@ describe('computeFanSurvey', () => {
             { queenOfTheWeek: 'Sasha', bottomOfTheWeek: 'Aja', lipSyncWinner: 'Trinity', bestDressed: 'Sasha', worstDressed: 'Aja' },
             { queenOfTheWeek: 'Sasha', bottomOfTheWeek: 'Aja', lipSyncWinner: 'Trinity', bestDressed: 'Sasha', worstDressed: 'Aja' },
         ];
-        p.fanSurveyResponse.findMany.mockResolvedValue(responses);
+        p.fanSurvey.findUnique.mockResolvedValue({ id: 1, computed: false });
+        p.fanSurveyData.findMany.mockResolvedValue(responses);
 
         // Sasha: queen of week (10) + best dressed (20) = 30
         const sashaRoster = makeRoster({ queens: ['Sasha'], pointUpdates: [0] });
@@ -324,11 +348,13 @@ describe('computeFanSurvey', () => {
 
         await computeFanSurvey('US', 17, 1);
 
+        // roster starts currentPoints:0, pointUpdates:[0]; earned=30 → newTotal=30, pointUpdates=[30]
         const expected = FanSurveyPoints.QUEEN_OF_WEEK + FanSurveyPoints.BEST_DRESSED;
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: expected },
+                    currentPoints: { set: expected },
+                    pointUpdates: { set: [expected] },
                 }),
             })
         );
@@ -340,7 +366,8 @@ describe('computeFanSurvey', () => {
             { queenOfTheWeek: 'Sasha', bottomOfTheWeek: 'Aja', lipSyncWinner: 'Trinity', bestDressed: 'Trinity', worstDressed: 'Aja' },
             { queenOfTheWeek: 'Katya', bottomOfTheWeek: 'Aja', lipSyncWinner: 'Trinity', bestDressed: 'Trinity', worstDressed: 'Aja' },
         ];
-        p.fanSurveyResponse.findMany.mockResolvedValue(responses);
+        p.fanSurvey.findUnique.mockResolvedValue({ id: 1, computed: false });
+        p.fanSurveyData.findMany.mockResolvedValue(responses);
 
         const sashaRoster = makeRoster({ recordId: 1, queens: ['Sasha'], pointUpdates: [0] });
         const katyaRoster = makeRoster({ recordId: 2, queens: ['Katya'], pointUpdates: [0] });
@@ -354,27 +381,29 @@ describe('computeFanSurvey', () => {
         const katyaCall = calls.find((c: any[]) => c[0].where.recordId === 2);
 
         // Both tied queens should receive QUEEN_OF_WEEK points
-        expect(sashaCall![0].data.currentPoints.increment).toBe(FanSurveyPoints.QUEEN_OF_WEEK);
-        expect(katyaCall![0].data.currentPoints.increment).toBe(FanSurveyPoints.QUEEN_OF_WEEK);
+        expect(sashaCall![0].data.currentPoints.set).toBe(FanSurveyPoints.QUEEN_OF_WEEK);
+        expect(katyaCall![0].data.currentPoints.set).toBe(FanSurveyPoints.QUEEN_OF_WEEK);
     });
 
     it('applies negative points for bottom-of-week and worst-dressed winners', async () => {
         const responses = [
             { queenOfTheWeek: 'Sasha', bottomOfTheWeek: 'Aja', lipSyncWinner: 'Trinity', bestDressed: 'Sasha', worstDressed: 'Aja' },
         ];
-        p.fanSurveyResponse.findMany.mockResolvedValue(responses);
+        p.fanSurvey.findUnique.mockResolvedValue({ id: 1, computed: false });
+        p.fanSurveyData.findMany.mockResolvedValue(responses);
 
-        // Aja: bottom of week (-5) + worst dressed (-5) = -10
+        // Aja: bottom of week (-5) + worst dressed (-5) = -10; clamped to 0; pointUpdates records the delta
         const ajaRoster = makeRoster({ queens: ['Aja'], pointUpdates: [0] });
         p.roster.findMany.mockResolvedValue([ajaRoster]);
 
         await computeFanSurvey('US', 17, 1);
 
-        const expected = FanSurveyPoints.BOTTOM_OF_WEEK + FanSurveyPoints.WORST_DRESSED;
+        const expected = FanSurveyPoints.BOTTOM_OF_WEEK + FanSurveyPoints.WORST_DRESSED; // -10
         expect(p.roster.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({
-                    currentPoints: { increment: expected },
+                    currentPoints: { set: 0 },
+                    pointUpdates: { set: [expected] },
                 }),
             })
         );

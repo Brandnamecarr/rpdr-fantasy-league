@@ -64,11 +64,19 @@ export const getAllSeasons = async (req: Request, res: Response) => {
     }
 };
 
+const parseDateField = (value?: string): Date | undefined => {
+    if (!value) return undefined;
+    // Accepts MM-DD-YYYY
+    const [month, day, year] = value.split('-').map(Number);
+    if (!month || !day || !year) return undefined;
+    return new Date(year, month - 1, day);
+};
+
 // Doc: Adds a new season record to the database.
 // Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number}, res (Response) - Express response object
 // Doc: Route: Likely POST /seasons
 export const addSeason = async (req: Request, res: Response) => {
-    const {franchise, season, isUsingBrackets, bracketCount} = req.body;
+    const {franchise, season, isUsingBrackets, bracketCount, startDate, endDate} = req.body;
     logger.info('ActiveSeasons.Controller: addSeason() - Request received to add new season', {franchise, season, isUsingBrackets, bracketCount});
 
     let seasonAsInt = Number(season) || 0;
@@ -85,6 +93,8 @@ export const addSeason = async (req: Request, res: Response) => {
             seasonAsInt,
             isUsingBrackets !== undefined ? Boolean(isUsingBrackets) : undefined,
             bracketCount !== undefined ? Number(bracketCount) : undefined,
+            parseDateField(startDate),
+            parseDateField(endDate),
         );
 
         if(!response) {
@@ -154,7 +164,7 @@ export const getBrackets = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, status: string}, res (Response) - Express response object
 // Doc: Route: Likely PUT /seasons or PATCH /seasons
 export const updateSeason = async (req: Request, res: Response) => {
-    const {franchise, season, status} = req.body;
+    const {franchise, season, status, startDate, endDate} = req.body;
     logger.info('ActiveSeasons.Controller: updateSeason() - Request received to update season status', {franchise, season, newStatus: status});
 
     let seasonAsInt = Number(season) || 0;
@@ -166,7 +176,11 @@ export const updateSeason = async (req: Request, res: Response) => {
 
     try {
         logger.debug('ActiveSeasons.Controller: updateSeason() - Calling service to update season status', {franchise, season: seasonAsInt, status});
-        let response = await seasonService.updateSeason(franchise, season, status);
+        let response = await seasonService.updateSeason(
+            franchise, season, status,
+            parseDateField(startDate),
+            parseDateField(endDate),
+        );
 
         if(!response) {
             logger.error('ActiveSeasons.Controller: updateSeason() - Service returned null, season not found or update failed', {franchise, season});
@@ -178,5 +192,16 @@ export const updateSeason = async (req: Request, res: Response) => {
     } catch(error) {
         logger.error('ActiveSeasons.Controller: updateSeason() - Error updating season status', {franchise, season, status, error: error});
         res.status(500).json({Error: 'Something went wrong when updating status'});
+    }
+};
+
+export const getFinaleEligibleSeasons = async (req: Request, res: Response) => {
+    logger.info('ActiveSeasons.Controller: getFinaleEligibleSeasons() - Request received');
+    try {
+        const response = await seasonService.getFinaleEligibleSeasons();
+        res.status(200).json(response);
+    } catch (error) {
+        logger.error('ActiveSeasons.Controller: getFinaleEligibleSeasons() - error', {error});
+        res.status(500).json({Error: 'Server error when loading finale-eligible seasons'});
     }
 };
