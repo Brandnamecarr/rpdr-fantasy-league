@@ -86,6 +86,8 @@ model ActiveSeasons {
   premiereDate    String?
   isUsingBrackets Boolean        @default(false)
   bracketCount    Int?
+  startDate       DateTime?
+  endDate         DateTime?
 
   @@unique([franchise, season])
 }
@@ -100,20 +102,51 @@ model Bracket {
   @@unique([franchise, season, bracketName])
 }
 
-model FanSurveyResponse {
-  id              Int      @id @default(autoincrement())
+model FanSurvey {
+  id        Int             @id @default(autoincrement())
+  franchise String
+  season    Int
+  episode   Int
+  startDate DateTime
+  endDate   DateTime
+  computed  Boolean         @default(false)
+
+  responses FanSurveyData[]
+
+  @@unique([franchise, season, episode])
+}
+
+model FanSurveyData {
+  id              Int       @id @default(autoincrement())
+  surveyId        Int
+  survey          FanSurvey @relation(fields: [surveyId], references: [id])
+  submittedBy     String
   franchise       String
   season          Int
   episode         Int
-  submittedBy     String
+  completedAt     DateTime  @default(now())
   queenOfTheWeek  String
   bottomOfTheWeek String
   lipSyncWinner   String
   bestDressed     String
   worstDressed    String
-  createdAt       DateTime @default(now())
 
-  @@unique([franchise, season, episode, submittedBy])
+  @@unique([surveyId, submittedBy])
+}
+
+model EpisodeResult {
+  id            Int      @id @default(autoincrement())
+  franchise     String
+  season        Int
+  episode       Int
+  maxiWinner    String[]
+  topQueens     String[]
+  eliminated    String[]
+  lipSyncWinner String[]
+  isSnatchGame  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([franchise, season, episode])
 }
 
 model SeasonFinaleResponse {

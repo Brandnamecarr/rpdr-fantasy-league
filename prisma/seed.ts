@@ -3,8 +3,8 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
-// Admin credentials — change the password via env var ADMIN_SEED_PASSWORD before running in production.
-const ADMIN_EMAIL = 'mother@rpdr-fantasy.com';
+// Admin credentials sourced from env vars.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL ?? 'MOTHER@RPDR-FANTASY.COM').toUpperCase();
 const ADMIN_PASSWORD = process.env.ADMIN_SEED_PASSWORD ?? 'MotherKnowsBest!2024';
 
 async function main() {

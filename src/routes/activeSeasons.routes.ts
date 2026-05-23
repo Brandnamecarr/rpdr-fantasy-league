@@ -11,6 +11,8 @@ router.use(protect);
 
 // Doc: GET /activeSeasons/getActiveSeasons - Retrieves all seasons with active status
 router.get("/getActiveSeasons", activeSeasonsController.getActiveSeasons);
+// Doc: GET /activeSeasons/getFinaleEligibleSeasons - Retrieves ACTIVE seasons whose endDate falls within the next 7 days
+router.get("/getFinaleEligibleSeasons", activeSeasonsController.getFinaleEligibleSeasons);
 // Doc: GET /activeSeasons/getUpcomingSeasons - Retrieves all inactive/upcoming seasons
 router.get("/getUpcomingSeasons", activeSeasonsController.getUpcomingSeasons);
 // Doc: GET /activeSeasons/getAllSeasons - Retrieves all seasons regardless of status

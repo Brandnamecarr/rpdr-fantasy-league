@@ -12,6 +12,10 @@ router.use(protect);
 router.get("/getAllRosters", leagueOpsController.getAllRosters);
 // Doc: GET /leagueOps/getRostersByFranchiseAndSeason?franchise=US&season=16 - Retrieves rosters by franchise and season
 router.get("/getRostersByFranchiseAndSeason", leagueOpsController.getRostersByFranchiseAndSeason);
+// Doc: GET /leagueOps/getEpisodeHistory?franchise=&season= - Returns all EpisodeResult records for a franchise/season
+router.get("/getEpisodeHistory", leagueOpsController.getEpisodeHistory);
+// Doc: GET /leagueOps/getTalliedFanSurveyResults?franchise=&season= - Returns tallied fan survey results per episode
+router.get("/getTalliedFanSurveyResults", leagueOpsController.getTalliedFanSurveyResults);
 
 // Doc: POST /leagueOps/weeklyUpdate - Processes weekly episode results and updates points (body: {franchise, season, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, linSyncWinner, eliminated})
 router.post("/weeklyUpdate", leagueOpsController.weeklyUpdate);
@@ -25,6 +29,10 @@ router.post('/removeUserFromLeague', leagueOpsController.removeUserFromLeague);
 router.post("/getAllLeagueRosters", leagueOpsController.getAllRostersByLeague);
 // Doc: POST /leagueOps/increaseLeagueSize - Increases the maxPlayers cap for a league (body: {leagueName, franchise, season, newMaxPlayers})
 router.post("/increaseLeagueSize", leagueOpsController.increaseLeagueSize);
+// Doc: GET /leagueOps/getOpenSurveys - Returns currently-open surveys for the authenticated user's franchise/seasons
+router.get("/getOpenSurveys", leagueOpsController.getOpenSurveys);
+// Doc: POST /leagueOps/openFanSurvey - Opens (or updates) a survey window (body: {franchise, season, episode, startDate?, endDate?})
+router.post("/openFanSurvey", leagueOpsController.openFanSurvey);
 // Doc: POST /leagueOps/submitFanSurvey - Store one fan survey response per user per episode (body: {franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed})
 router.post("/submitFanSurvey", leagueOpsController.submitFanSurvey);
 // Doc: POST /leagueOps/computeFanSurvey - Tally votes and apply point adjustments after the Fri-Thu window closes (body: {franchise, season, episode})
