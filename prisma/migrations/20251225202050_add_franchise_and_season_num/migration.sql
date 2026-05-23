@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "League" ADD COLUMN     "franchise" TEXT NOT NULL DEFAULT 'USA',
+ADD COLUMN     "season" INTEGER NOT NULL DEFAULT 18;
+
+-- AlterTable
+ALTER TABLE "Roster" ADD COLUMN     "franchise" TEXT NOT NULL DEFAULT 'USA',
+ADD COLUMN     "season" INTEGER NOT NULL DEFAULT 18;
