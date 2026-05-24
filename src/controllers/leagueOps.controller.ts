@@ -222,6 +222,20 @@ export const getOpenSurveys = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Returns all surveys (open + closed) for the authenticated user's franchise/seasons.
+// Doc: Route: GET /leagueOps/getAllSurveys
+export const getAllSurveys = async (req: Request, res: Response) => {
+    const email = (req as any).user?.email;
+    logger.info('LeagueOps.Controller.ts: getAllSurveys() - request received', { email });
+    try {
+        const surveys = await leagueOpsService.getAllSurveysForUser(email);
+        return res.status(200).json(surveys);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: getAllSurveys() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error fetching surveys' });
+    }
+};
+
 // Doc: Route: POST /leagueOps/submitFanSurvey
 export const submitFanSurvey = async (req: Request, res: Response) => {
     const { franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed } = req.body;

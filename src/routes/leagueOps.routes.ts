@@ -31,6 +31,8 @@ router.post("/getAllLeagueRosters", leagueOpsController.getAllRostersByLeague);
 router.post("/increaseLeagueSize", leagueOpsController.increaseLeagueSize);
 // Doc: GET /leagueOps/getOpenSurveys - Returns currently-open surveys for the authenticated user's franchise/seasons
 router.get("/getOpenSurveys", leagueOpsController.getOpenSurveys);
+// Doc: GET /leagueOps/getAllSurveys - Returns all surveys (open + closed) for the authenticated user's franchise/seasons
+router.get("/getAllSurveys", leagueOpsController.getAllSurveys);
 // Doc: POST /leagueOps/openFanSurvey - Opens (or updates) a survey window (body: {franchise, season, episode, startDate?, endDate?})
 router.post("/openFanSurvey", leagueOpsController.openFanSurvey);
 // Doc: POST /leagueOps/submitFanSurvey - Store one fan survey response per user per episode (body: {franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed})

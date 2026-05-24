@@ -415,6 +415,31 @@ export const getOpenSurveysForUser = async (email: string) => {
     }));
 };
 
+// Doc: Returns all FanSurvey records (open + closed) for the user's franchise/seasons, each decorated with hasVoted.
+export const getAllSurveysForUser = async (email: string) => {
+    logger.info('LeagueOps.Service.ts: getAllSurveysForUser() - fetching all surveys', {email});
+    const now = new Date();
+
+    const rosters = await prisma.roster.findMany({ where: { username: email }, select: { franchise: true, season: true } });
+    if (rosters.length === 0) return [];
+
+    const surveys = await prisma.fanSurvey.findMany({
+        where: {
+            OR: rosters.map(r => ({ franchise: r.franchise, season: r.season })),
+            startDate: { lte: now },
+        },
+        include: {
+            responses: { where: { submittedBy: email }, select: { id: true } },
+        },
+        orderBy: [{ season: 'desc' }, { episode: 'desc' }],
+    });
+
+    return surveys.map(({ responses, ...survey }) => ({
+        ...survey,
+        hasVoted: responses.length > 0,
+    }));
+};
+
 // Doc: Stores an individual fan survey response after verifying the survey is open and the user participates in that franchise/season.
 // Doc: Throws 'SURVEY_NOT_FOUND', 'SURVEY_CLOSED', 'NOT_ELIGIBLE', or a Prisma P2002 for duplicate submissions.
 export const submitFanSurvey = async (
