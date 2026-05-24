@@ -11,7 +11,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
     logger.info('Admin.Controller.ts: dumpDatabase() - starting full database dump');
 
     try {
-        const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses] =
+        const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses, episodeResults] =
             await Promise.all([
                 prisma.user.findMany(),
                 prisma.league.findMany(),
@@ -23,6 +23,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
                 prisma.fanSurvey.findMany(),
                 prisma.fanSurveyData.findMany(),
                 prisma.seasonFinaleResponse.findMany(),
+                prisma.episodeResult.findMany(),
             ]);
 
         // Strip password hashes — everything else is included as-is
@@ -41,6 +42,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
                 fanSurveys:             { count: fanSurveys.length,             records: fanSurveys },
                 fanSurveyData:          { count: fanSurveyData.length,          records: fanSurveyData },
                 seasonFinaleResponses:  { count: seasonFinaleResponses.length,  records: seasonFinaleResponses },
+                episodeResults:         { count: episodeResults.length,         records: episodeResults },
             },
         };
 
