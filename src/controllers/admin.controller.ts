@@ -4,6 +4,132 @@ import prisma from '../db/prisma.client';
 import logger from '../util/LoggerImpl';
 import * as leagueOpsService from '../services/leagueOps.service';
 
+// Doc: Returns all users (id, email, displayName, createdAt) — passwords excluded.
+// Doc: Route: GET /admin/users
+export const getAllUsers = async (_req: Request, res: Response) => {
+    try {
+        const users = await prisma.user.findMany({
+            select: { id: true, email: true, displayName: true, createdAt: true },
+            orderBy: { email: 'asc' },
+        });
+        return res.status(200).json(users);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAllUsers() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to fetch users' });
+    }
+};
+
+// Doc: Force-resets a user's password to the supplied plaintext (bcrypt-hashed before storage).
+// Doc: Body: { email: string, newPassword: string }
+// Doc: Route: POST /admin/resetPassword
+export const resetUserPassword = async (req: Request, res: Response) => {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+        return res.status(400).json({ Error: 'email and newPassword are required' });
+    }
+    if (newPassword.length < 8) {
+        return res.status(400).json({ Error: 'Password must be at least 8 characters' });
+    }
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ Error: `User ${email} not found` });
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({ where: { email }, data: { password: hashed } });
+
+        logger.info('Admin.Controller.ts: resetUserPassword() - password reset', { email });
+        return res.status(200).json({ message: `Password reset for ${email}` });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: resetUserPassword() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to reset password' });
+    }
+};
+
+// Doc: Admin-keyed weekly update — same logic as the leagueOps weeklyUpdate but protected by admin key instead of JWT.
+// Doc: Body: { franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName? }
+// Doc: Route: POST /admin/weeklyUpdate
+export const adminWeeklyUpdate = async (req: Request, res: Response) => {
+    const { franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName } = req.body;
+
+    if (!franchise || !season || !episode) {
+        return res.status(400).json({ Error: 'franchise, season, and episode are required' });
+    }
+
+    logger.info('Admin.Controller.ts: adminWeeklyUpdate() - request received', { franchise, season, episode, bracketName });
+
+    try {
+        const resp = await leagueOpsService.weeklyUpdate(
+            franchise, Number(season), Number(episode),
+            maxiWinner ?? [], isSnatchGame ?? false, miniWinner ?? [],
+            topQueens ?? [], safeQueens ?? [], bottomQueens ?? [],
+            lipSyncWinner ?? [], eliminated ?? [], bracketName
+        );
+        if (!resp) return res.status(404).json({ Error: 'weeklyUpdate returned no response' });
+        logger.info('Admin.Controller.ts: adminWeeklyUpdate() - complete', { franchise, season, episode });
+        return res.status(201).json(resp);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: adminWeeklyUpdate() - failed', { error });
+        return res.status(500).json({ Error: 'Error processing weekly update' });
+    }
+};
+
+// Doc: Returns active seasons for the admin panel season selector.
+// Doc: Route: GET /admin/activeSeasons
+export const getAdminActiveSeasons = async (_req: Request, res: Response) => {
+    try {
+        const seasons = await prisma.activeSeasons.findMany({
+            where: { activityStatus: 'ACTIVE' },
+            orderBy: [{ franchise: 'asc' }, { season: 'asc' }],
+        });
+        return res.status(200).json(seasons);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminActiveSeasons() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to fetch active seasons' });
+    }
+};
+
+// Doc: Returns brackets for a franchise/season to filter queen suggestions in the admin form.
+// Doc: Query: ?franchise=&season=
+// Doc: Route: GET /admin/brackets
+export const getAdminBrackets = async (req: Request, res: Response) => {
+    const { franchise, season } = req.query;
+    if (!franchise || !season) {
+        return res.status(400).json({ Error: 'franchise and season are required' });
+    }
+    try {
+        const brackets = await prisma.bracket.findMany({
+            where: { franchise: String(franchise), season: Number(season) },
+            select: { bracketName: true, queens: true },
+            orderBy: { bracketName: 'asc' },
+        });
+        return res.status(200).json(brackets);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminBrackets() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to fetch brackets' });
+    }
+};
+
+// Doc: Returns queens for a franchise/season to populate the admin weekly update form.
+// Doc: Query: ?franchise=&season=
+// Doc: Route: GET /admin/queens
+export const getAdminQueens = async (req: Request, res: Response) => {
+    const { franchise, season } = req.query;
+    if (!franchise || !season) {
+        return res.status(400).json({ Error: 'franchise and season are required' });
+    }
+    try {
+        const queens = await prisma.queen.findMany({
+            where: { franchise: String(franchise), season: Number(season) },
+            select: { name: true, status: true },
+            orderBy: { name: 'asc' },
+        });
+        return res.status(200).json(queens);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminQueens() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to fetch queens' });
+    }
+};
+
 // Doc: Queries every table in the database and returns the full dump as a JSON object.
 // Doc: User password hashes are omitted from the dump.
 // Doc: Route: GET /admin/dump  (protected by protectAdmin)
