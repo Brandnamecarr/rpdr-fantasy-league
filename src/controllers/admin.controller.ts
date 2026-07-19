@@ -308,3 +308,36 @@ export const computeSeasonFinale = async (req: Request, res: Response) => {
         return res.status(500).json({ Error: 'Error computing season finale results' });
     }
 };
+
+// Doc: Applies end-of-season league point awards (winner, runner-up) directly to rosters, bypassing the fan survey tally.
+// Doc: Every other ACTIVE queen for that franchise/season is treated as eliminated (status + point penalty).
+// Doc: Callers are expected to have already validated winner/runnerUp against the queens list (see /queens/getQueensByFranSeas),
+// Doc: same convention as adminWeeklyUpdate — this route does not re-validate queen names or statuses.
+// Doc: Body: { franchise: string, season: number, episode: number, winner: string[], runnerUp: string[] }
+// Doc: Route: POST /admin/endOfSeasonUpdate  (protected by protectAdmin)
+export const endOfSeasonUpdate = async (req: Request, res: Response) => {
+    const { franchise, season, episode, winner, runnerUp } = req.body;
+
+    if (!franchise || !season || !episode) {
+        logger.error('Admin.Controller.ts: endOfSeasonUpdate() - missing franchise, season, or episode');
+        return res.status(400).json({ Error: 'franchise, season, and episode are required' });
+    }
+
+    logger.info('Admin.Controller.ts: endOfSeasonUpdate() - request received', { franchise, season, episode, winner, runnerUp });
+
+    try {
+        const results = await leagueOpsService.endOfSeasonUpdate(
+            franchise, Number(season), Number(episode),
+            winner ?? [], runnerUp ?? []
+        );
+        if (!results) {
+            logger.error('Admin.Controller.ts: endOfSeasonUpdate() - no rosters found', { franchise, season });
+            return res.status(404).json({ Error: 'No rosters found for this franchise/season' });
+        }
+        logger.info('Admin.Controller.ts: endOfSeasonUpdate() - points applied', { updatedRosters: results.length, franchise, season, episode });
+        return res.status(200).json({ updatedRosters: results.length, rosters: results });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: endOfSeasonUpdate() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error applying end of season update' });
+    }
+};

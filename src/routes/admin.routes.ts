@@ -10,6 +10,7 @@ router.post('/dump',               protectAdmin, adminController.restoreDatabase
 
 // Season finale
 router.post('/computeSeasonFinale', protectAdmin, adminController.computeSeasonFinale);
+router.post('/endOfSeasonUpdate',   protectAdmin, adminController.endOfSeasonUpdate);
 
 // Weekly update (admin-keyed)
 router.post('/weeklyUpdate',       protectAdmin, adminController.adminWeeklyUpdate);

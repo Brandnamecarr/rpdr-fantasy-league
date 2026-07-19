@@ -2,6 +2,7 @@ import prisma from "../db/prisma.client";
 import logger from "../util/LoggerImpl";
 
 import { getLeague } from "./league.service";
+import { getByFranchiseAndSeason as getQueensByFranchiseAndSeason } from "./queen.service";
 import {League, Roster, User, BracketName} from '@prisma/client';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
 import { QueenStatus } from "@prisma/client";
@@ -706,6 +707,70 @@ export const computeSeasonFinale = async (franchise: string, season: number) => 
         return results;
     } catch (error) {
         logger.error('LeagueOps.Service.ts: computeSeasonFinale() - transaction failed', {franchise, season, error});
+        return null;
+    }
+};
+
+// Doc: Applies end-of-season league point awards directly to rosters, bypassing the fan survey tally.
+// Doc: Every remaining ACTIVE queen not named as winner/runnerUp is treated as eliminated in the finale:
+// Doc: they take the standard PointManipulation.ELIMINATED penalty and their DB status flips to ELIMINATED.
+// Doc: Winner/runnerUp queens have their status flipped to WINNER/RUNNER_UP. Caller is responsible for
+// Doc: setting the season INACTIVE afterward (see activeSeason/updateSeason) — this function does not do it.
+// Doc: Award categories beyond winner/runnerUp (e.g. bestDressed, missCongeniality, fanFavorite, tradeOfTheSeason, mostImproved
+// Doc: from LeaguePointAwards) can be added as additional optional params later without changing this function's shape.
+// Doc: Args: franchise, season, episode - identifies the finale episode being closed out; winner, runnerUp - queen name(s) receiving each award
+// Doc: Callers are expected to have already validated that winner/runnerUp are known, currently-ACTIVE queens.
+// Doc: Returns: Promise<Roster[] | null> - Updated roster records or null if no rosters found
+export const endOfSeasonUpdate = async (
+    franchise: string, season: number, episode: number,
+    winner: string[], runnerUp: string[]
+) => {
+    logger.info('LeagueOps.Service.ts: endOfSeasonUpdate() - applying end of season awards', {franchise, season, episode, winner, runnerUp});
+
+    try {
+        const rosters = await getRostersByFranchiseAndLeague(franchise, season);
+        if (!rosters || rosters.length === 0) {
+            logger.error('LeagueOps.Service.ts: endOfSeasonUpdate() - no rosters found', {franchise, season});
+            return null;
+        }
+
+        const queens = await getQueensByFranchiseAndSeason(franchise, season);
+        const namedQueens = new Set([...winner, ...runnerUp]);
+        const eliminated = queens
+            .filter(q => q.status === QueenStatus.ACTIVE && !namedQueens.has(q.name))
+            .map(q => q.name);
+
+        let scores: Record<string, number> = {};
+        const addScore = (queenNames: string[], pts: number) =>
+            queenNames.forEach(q => { scores[q] = (scores[q] || 0) + pts; });
+
+        addScore(winner,     LeaguePointAwards.WINNER);
+        addScore(runnerUp,   LeaguePointAwards.RUNNER_UP);
+        addScore(eliminated, PointManipulation.ELIMINATED);
+
+        const updatePromises = rosters.map(roster => {
+            const pointsEarned = roster.queens.reduce((total, queenName) =>
+                total + (scores[queenName] || 0), 0);
+            return buildMergedPointUpdate(roster, pointsEarned);
+        });
+
+        const results = await prisma.$transaction(updatePromises);
+        logger.info(`LeagueOps.Service.ts: endOfSeasonUpdate() - updated ${results.length} rosters`, {franchise, season, episode});
+
+        if (winner.length > 0) {
+            await prisma.queen.updateMany({ where: { franchise, season, name: { in: winner } }, data: { status: QueenStatus.WINNER } });
+        }
+        if (runnerUp.length > 0) {
+            await prisma.queen.updateMany({ where: { franchise, season, name: { in: runnerUp } }, data: { status: QueenStatus.RUNNER_UP } });
+        }
+        if (eliminated.length > 0) {
+            await prisma.queen.updateMany({ where: { franchise, season, name: { in: eliminated } }, data: { status: QueenStatus.ELIMINATED } });
+        }
+        logger.info('LeagueOps.Service.ts: endOfSeasonUpdate() - queen statuses updated', {franchise, season, winner, runnerUp, eliminated});
+
+        return results;
+    } catch (error) {
+        logger.error('LeagueOps.Service.ts: endOfSeasonUpdate() - transaction failed', {franchise, season, episode, error});
         return null;
     }
 };
