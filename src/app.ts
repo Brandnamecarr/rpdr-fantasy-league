@@ -18,6 +18,10 @@ import adminRoutes from './routes/admin.routes';
 // Doc: Express app instance with middleware configuration
 const app = express();
 
+// Doc: Trust the ALB's X-Forwarded-For header so req.ip reflects the real
+//      client IP instead of the load balancer's internal address.
+app.set('trust proxy', true);
+
 // Doc: CORS origin — reads from CORS_ORIGIN env var so each environment
 //      (local, staging, prod) restricts access to the correct frontend.
 //      Falls back to localhost:5173 for local development.

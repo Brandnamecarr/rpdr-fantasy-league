@@ -73,7 +73,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
     const token = authHeader?.split(' ')[1] || undefined; // Bearer <token>
 
     if(!token) {
-        logger.error('TokenManager.protect() -> Not authorized or no token present.');
+        logger.error('TokenManager.protect() -> Not authorized or no token present.', {method: req.method, path: req.originalUrl, ip: req.ip});
         return res.status(401).json({Error: `Not Authorized or no token present`});
     }
 
@@ -83,7 +83,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
         req.user = decoded;
         next();
     } catch(error) {
-        logger.error('TokenManager.verifyToken() -> Token failed verification');
+        logger.error('TokenManager.verifyToken() -> Token failed verification', {method: req.method, path: req.originalUrl, ip: req.ip});
         res.status(401).json({Error: `Token Failed`});
     }
 };
