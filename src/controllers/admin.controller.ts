@@ -3,6 +3,20 @@ import * as bcrypt from 'bcrypt';
 import prisma from '../db/prisma.client';
 import logger from '../util/LoggerImpl';
 import * as leagueOpsService from '../services/leagueOps.service';
+import * as leagueService from '../services/league.service';
+import * as logService from '../services/log.service';
+import { generateToken } from '../util/TokenManager';
+
+// Doc: Email of the seeded admin account (see prisma/reset-admin.ts) used to mint JWTs for the admin panel.
+const ADMIN_ACCOUNT_EMAIL = 'mother@rpdr-fantasy.com';
+
+// Doc: Parses a date query param — matches the convention in activeSeasons.controller.ts (accepts MM-DD-YYYY).
+const parseDateField = (value?: string): Date | undefined => {
+    if (!value) return undefined;
+    const [month, day, year] = value.split('-').map(Number);
+    if (!month || !day || !year) return undefined;
+    return new Date(year, month - 1, day);
+};
 
 // Doc: Returns all users (id, email, displayName, createdAt) — passwords excluded.
 // Doc: Route: GET /admin/users
@@ -42,6 +56,49 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     } catch (error) {
         logger.error('Admin.Controller.ts: resetUserPassword() - failed', { error });
         return res.status(500).json({ Error: 'Failed to reset password' });
+    }
+};
+
+// Doc: Mints a short-lived user JWT for the seeded admin account, so the admin panel (which only
+// Doc: holds the static admin key) can call JWT-protected (`protect`) routes it doesn't have a
+// Doc: dedicated protectAdmin mirror for. Access to this endpoint is itself gated by protectAdmin,
+// Doc: so no password check is needed here — the admin key already proved who's asking.
+// Doc: Route: GET /admin/getJwt
+export const getAdminJwt = async (_req: Request, res: Response) => {
+    try {
+        const admin = await prisma.user.findUnique({ where: { email: ADMIN_ACCOUNT_EMAIL } });
+        if (!admin) {
+            logger.error('Admin.Controller.ts: getAdminJwt() - seeded admin account not found', { email: ADMIN_ACCOUNT_EMAIL });
+            return res.status(404).json({ Error: 'Admin account not found' });
+        }
+        const token = generateToken({ id: admin.id, email: admin.email });
+        return res.status(200).json({ token });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminJwt() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to mint admin JWT' });
+    }
+};
+
+// Doc: Deletes a league and cleans up any rosters associated with it. There is no user-facing
+// Doc: button for this (destructive, irreversible) — it's meant to be called directly by
+// Doc: whoever holds the admin key.
+// Doc: Body: { leagueName: string }
+// Doc: Route: POST /admin/deleteLeague
+export const deleteLeague = async (req: Request, res: Response) => {
+    const { leagueName } = req.body;
+    if (!leagueName) {
+        return res.status(400).json({ Error: 'leagueName is required' });
+    }
+    try {
+        const result = await leagueService.deleteLeague(leagueName);
+        if (!result) {
+            return res.status(404).json({ Error: `League '${leagueName}' not found` });
+        }
+        logger.info('Admin.Controller.ts: deleteLeague() - league deleted', { leagueName, deletedRosters: result.deletedRosters });
+        return res.status(200).json({ message: `League '${leagueName}' deleted`, deletedRosters: result.deletedRosters });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: deleteLeague() - failed', { error, leagueName });
+        return res.status(500).json({ Error: 'Failed to delete league' });
     }
 };
 
@@ -339,5 +396,31 @@ export const endOfSeasonUpdate = async (req: Request, res: Response) => {
     } catch (error) {
         logger.error('Admin.Controller.ts: endOfSeasonUpdate() - unexpected error', { error });
         return res.status(500).json({ Error: 'Error applying end of season update' });
+    }
+};
+
+// Doc: Returns paginated, filterable log entries from logs/app.log for the admin log viewer.
+// Doc: Query: ?level=&startDate=&endDate=&search=&page=&pageSize= (all optional; page defaults to 1, pageSize defaults to 100, max 500)
+// Doc: Route: GET /admin/logs  (protected by protectAdmin)
+export const getLogs = async (req: Request, res: Response) => {
+    const { level, startDate, endDate, search } = req.query;
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(500, Math.max(1, Number(req.query.pageSize) || 100));
+
+    try {
+        const result = logService.getLogEntries({
+            level: level ? String(level) : undefined,
+            startDate: parseDateField(startDate ? String(startDate) : undefined),
+            endDate: parseDateField(endDate ? String(endDate) : undefined),
+            search: search ? String(search) : undefined,
+            page,
+            pageSize,
+        });
+
+        return res.status(200).json({ entries: result.entries, total: result.total, page, pageSize });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getLogs() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to fetch logs' });
     }
 };

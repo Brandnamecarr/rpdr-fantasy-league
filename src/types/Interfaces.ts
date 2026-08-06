@@ -26,6 +26,16 @@ export interface QueenInput {
     status: QueenStatus;
 }
 
+// Doc: Shape of a single parsed line from logs/app.log (see util/LoggerImpl.ts).
+// Doc: Properties: timestamp (ISO 8601 string), level ("ERROR" | "INFO" | "DEBUG"), service (string), message (string), context (arbitrary JSON object)
+export interface LogEntry {
+    timestamp: string;
+    level: string;
+    service: string;
+    message: string;
+    context: object;
+}
+
 // Doc: Input structure for creating new league records
 // Doc: Properties: leaguename (string), owner (string), users (string[]), maxPlayers (number), maxQueensPerTeam (number), franchise (string), season (number), teamName (string), queens (string[])
 export interface CreateLeagueInput {

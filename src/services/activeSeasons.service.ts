@@ -94,17 +94,34 @@ export const getSeasonRecord = (franchise: string, season: number) => {
     });
 };
 
-// Doc: Returns ACTIVE seasons where today falls within the last 7 days before endDate.
+// Doc: Length of the season finale survey window, in days before a season's endDate.
+export const SEASON_FINALE_SURVEY_WINDOW_DAYS = 7;
+
+// Doc: Computes the season finale survey window for a season's endDate: opens
+// Doc: SEASON_FINALE_SURVEY_WINDOW_DAYS before endDate, closes at endDate. Returns null if
+// Doc: endDate is not set (no window to enforce). Shared by getFinaleEligibleSeasons (DB-level
+// Doc: filter, below) and submitSeasonFinale (per-request enforcement) so the two can't drift.
+// Doc: Args: endDate (Date | null | undefined)
+// Doc: Returns: { opensAt: Date; closesAt: Date } | null
+export const getSurveyWindow = (endDate: Date | null | undefined): { opensAt: Date; closesAt: Date } | null => {
+    if (!endDate) return null;
+    const closesAt = new Date(endDate);
+    const opensAt = new Date(closesAt);
+    opensAt.setDate(opensAt.getDate() - SEASON_FINALE_SURVEY_WINDOW_DAYS);
+    return { opensAt, closesAt };
+};
+
+// Doc: Returns ACTIVE seasons where today falls within the last SEASON_FINALE_SURVEY_WINDOW_DAYS days before endDate.
 export const getFinaleEligibleSeasons = () => {
     const now = new Date();
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const windowEnd = new Date(now);
+    windowEnd.setDate(windowEnd.getDate() + SEASON_FINALE_SURVEY_WINDOW_DAYS);
     return prisma.activeSeasons.findMany({
         where: {
             activityStatus: 'ACTIVE',
             endDate: {
                 gte: now,
-                lte: sevenDaysFromNow,
+                lte: windowEnd,
             },
         },
     });

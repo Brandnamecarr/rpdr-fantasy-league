@@ -81,6 +81,27 @@ export const createLeague = async (leaguename: string, owner: string, users: Arr
     return newLeague;
 };
 
+// Doc: Deletes a league and every roster associated with it. leagueName is not a Prisma FK
+// Doc: relation to Roster (tables are linked only by matching the leagueName string), so
+// Doc: cleanup is manual — done in a transaction alongside the league delete so the two
+// Doc: can't partially apply.
+// Doc: Args: leagueName (string) - The league's unique name
+// Doc: Returns: Promise<{ league: League; deletedRosters: number } | null> - The deleted league + roster count, or null if the league doesn't exist
+export const deleteLeague = async (leagueName: string) => {
+    logger.debug('League.Service.ts: deleteLeague() - deleting league and its rosters', {leagueName});
+
+    const existing = await prisma.league.findUnique({ where: { leagueName } });
+    if (!existing) return null;
+
+    const [{ count: deletedRosters }, league] = await prisma.$transaction([
+        prisma.roster.deleteMany({ where: { leagueName } }),
+        prisma.league.delete({ where: { leagueName } }),
+    ]);
+
+    logger.info('League.Service.ts: deleteLeague() - league and rosters deleted', {leagueName, deletedRosters});
+    return { league, deletedRosters };
+};
+
 // Doc: Queries the database for all leagues where the user is a member.
 // Doc: Args: email (string) - The user's email address
 // Doc: Returns: Promise<League[]> - Array of leagues the user is part of (returns id, leagueName, franchise, season)

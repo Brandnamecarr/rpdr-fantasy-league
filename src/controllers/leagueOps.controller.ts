@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import * as leagueOpsService from '../services/leagueOps.service';
 import logger from "../util/LoggerImpl";
 import * as leagueService from '../services/league.service';
-import { getSeasonRecord } from '../services/activeSeasons.service';
+import { getSeasonRecord, getSurveyWindow } from '../services/activeSeasons.service';
 
 import {League, User, Roster} from '@prisma/client';
 
@@ -321,13 +321,11 @@ export const submitSeasonFinale = async (req: Request, res: Response) => {
 
     try {
         const seasonRecord = await getSeasonRecord(franchise, Number(season));
-        if (seasonRecord?.endDate) {
+        const window = getSurveyWindow(seasonRecord?.endDate);
+        if (window) {
             const now = new Date();
-            const endDate = new Date(seasonRecord.endDate);
-            const windowStart = new Date(endDate);
-            windowStart.setDate(windowStart.getDate() - 7);
-            if (now < windowStart || now > endDate) {
-                logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - outside survey window', { franchise, season, now, windowStart, endDate });
+            if (now < window.opensAt || now > window.closesAt) {
+                logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - outside survey window', { franchise, season, now, window });
                 return res.status(403).json({ Error: 'The Season Finale Survey is not currently open for this season' });
             }
         }
