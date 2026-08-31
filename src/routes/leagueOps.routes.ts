@@ -1,7 +1,7 @@
 // Doc: Route definitions for league operations endpoints (roster management, weekly updates). All routes are protected by JWT authentication.
 // Doc: Base path: /leagueOps (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/TokenManager";
+import { protect } from "../util/credentials/TokenManager";
 import * as leagueOpsController from '../controllers/leagueOps.controller';
 
 const router = Router();

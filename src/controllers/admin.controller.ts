@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import * as bcrypt from 'bcrypt';
 import prisma from '../db/prisma.client';
-import logger from '../util/LoggerImpl';
+import logger from '../util/logger/LoggerImpl';
 import * as leagueOpsService from '../services/leagueOps.service';
 import * as leagueService from '../services/league.service';
 import * as logService from '../services/log.service';
-import { generateToken } from '../util/TokenManager';
+import * as workflowService from '../services/workflow.service';
+import * as adminService from '../services/admin.service';
+import { generateToken } from '../util/credentials/TokenManager';
 
 // Doc: Email of the seeded admin account (see prisma/reset-admin.ts) used to mint JWTs for the admin panel.
 const ADMIN_ACCOUNT_EMAIL = 'mother@rpdr-fantasy.com';
@@ -40,9 +42,6 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     const { email, newPassword } = req.body;
     if (!email || !newPassword) {
         return res.status(400).json({ Error: 'email and newPassword are required' });
-    }
-    if (newPassword.length < 8) {
-        return res.status(400).json({ Error: 'Password must be at least 8 characters' });
     }
     try {
         const user = await prisma.user.findUnique({ where: { email } });
@@ -194,40 +193,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
     logger.info('Admin.Controller.ts: dumpDatabase() - starting full database dump');
 
     try {
-        const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses, episodeResults] =
-            await Promise.all([
-                prisma.user.findMany(),
-                prisma.league.findMany(),
-                prisma.roster.findMany(),
-                prisma.notification.findMany(),
-                prisma.queen.findMany(),
-                prisma.activeSeasons.findMany(),
-                prisma.bracket.findMany(),
-                prisma.fanSurvey.findMany(),
-                prisma.fanSurveyData.findMany(),
-                prisma.seasonFinaleResponse.findMany(),
-                prisma.episodeResult.findMany(),
-            ]);
-
-        // Strip password hashes — everything else is included as-is
-        const users = rawUsers.map(({ password: _omit, ...rest }) => rest);
-
-        const dump = {
-            timestamp: new Date().toISOString(),
-            tables: {
-                users:                  { count: users.length,                  records: users },
-                leagues:                { count: leagues.length,                records: leagues },
-                rosters:                { count: rosters.length,                records: rosters },
-                notifications:          { count: notifications.length,          records: notifications },
-                queens:                 { count: queens.length,                 records: queens },
-                activeSeasons:          { count: activeSeasons.length,          records: activeSeasons },
-                brackets:               { count: brackets.length,               records: brackets },
-                fanSurveys:             { count: fanSurveys.length,             records: fanSurveys },
-                fanSurveyData:          { count: fanSurveyData.length,          records: fanSurveyData },
-                seasonFinaleResponses:  { count: seasonFinaleResponses.length,  records: seasonFinaleResponses },
-                episodeResults:         { count: episodeResults.length,         records: episodeResults },
-            },
-        };
+        const dump = await adminService.buildDatabaseDump();
 
         logger.info('Admin.Controller.ts: dumpDatabase() - dump complete', { tableCount: Object.keys(dump.tables).length });
         res.status(200).json(dump);
@@ -396,6 +362,48 @@ export const endOfSeasonUpdate = async (req: Request, res: Response) => {
     } catch (error) {
         logger.error('Admin.Controller.ts: endOfSeasonUpdate() - unexpected error', { error });
         return res.status(500).json({ Error: 'Error applying end of season update' });
+    }
+};
+
+// Doc: Starts a workflow's steps executing in the background and returns an execution id the
+// Doc: client polls via getWorkflowStatus. The workflow itself runs fire-and-forget — a failing
+// Doc: step never crashes this request or the server (see workflow.service.ts).
+// Doc: Body: { workflowId: string, input?: object } — `input` is only needed by workflows that require it
+// Doc: (e.g. LookFinder's franchise/season/episode); it's passed through untouched to every step's run().
+// Doc: Route: POST /admin/workflows/execute  (protected by protectAdmin)
+export const executeWorkflow = async (req: Request, res: Response) => {
+    const { workflowId, input } = req.body;
+    if (!workflowId) {
+        return res.status(400).json({ Error: 'workflowId is required' });
+    }
+    try {
+        const executionId = workflowService.startWorkflowExecution(workflowId, input);
+        if (!executionId) {
+            return res.status(404).json({ Error: 'Workflow not found' });
+        }
+        logger.info('Admin.Controller.ts: executeWorkflow() - workflow started', { workflowId, executionId });
+        return res.status(201).json({ executionId });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: executeWorkflow() - failed', { error, workflowId });
+        return res.status(500).json({ Error: 'Failed to start workflow' });
+    }
+};
+
+// Doc: Returns the current live status of a workflow execution (in-memory, polled by the admin
+// Doc: panel's execution modal). 404s once the execution has never existed or has been evicted
+// Doc: from the in-memory map after its 10-minute post-completion TTL.
+// Doc: Route: GET /admin/workflows/status/:executionId  (protected by protectAdmin)
+export const getWorkflowStatus = async (req: Request, res: Response) => {
+    const { executionId } = req.params;
+    try {
+        const state = workflowService.getExecutionStatus(executionId);
+        if (!state) {
+            return res.status(404).json({ Error: 'Execution not found' });
+        }
+        return res.status(200).json(state);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getWorkflowStatus() - failed', { error, executionId });
+        return res.status(500).json({ Error: 'Failed to fetch workflow status' });
     }
 };
 

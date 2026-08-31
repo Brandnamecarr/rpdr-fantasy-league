@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as leagueOpsService from '../services/leagueOps.service';
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 import * as leagueService from '../services/league.service';
 import { getSeasonRecord, getSurveyWindow } from '../services/activeSeasons.service';
 

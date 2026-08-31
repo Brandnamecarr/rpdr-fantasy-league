@@ -1,29 +1,13 @@
 // Doc: Reads and filters server log entries from logs/app.log for the admin log viewer.
 import * as fs from 'fs';
 import * as path from 'path';
-import logger from '../util/LoggerImpl';
+import logger from '../util/logger/LoggerImpl';
 import * as INTERFACES from '../types/Interfaces';
-
-// Doc: Filter/pagination options accepted by getLogEntries.
-export interface LogFilters {
-    level?: string;
-    startDate?: Date;
-    endDate?: Date;
-    search?: string;
-    page: number;
-    pageSize: number;
-}
-
-// Doc: Result shape returned by getLogEntries — one page of entries plus the total match count.
-export interface LogEntriesResult {
-    entries: INTERFACES.LogEntry[];
-    total: number;
-}
 
 // Doc: Reads and filters the app.log file (JSONL), newest-first, paginated.
 // Doc: Args: filters (LogFilters) - level/startDate/endDate/search/page/pageSize
 // Doc: Returns: LogEntriesResult - { entries, total }
-export const getLogEntries = (filters: LogFilters): LogEntriesResult => {
+export const getLogEntries = (filters: INTERFACES.LogFilters): INTERFACES.LogEntriesResult => {
     logger.debug('Log.Service.ts: getLogEntries() - reading logs/app.log', {filters});
 
     const logFilePath = path.join(process.cwd(), 'logs/app.log');

@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import * as userService from "../services/user.service";
-import * as passwordManager from "../util/PasswordManager";
-import * as tokenManager from '../util/TokenManager';
+import * as passwordManager from "../util/credentials/PasswordManager";
+import * as tokenManager from '../util/credentials/TokenManager';
 import * as notificationService from '../services/notification.service';
-import logger from "../util/LoggerImpl";
-import { AuthRequest, UserTokenPayload } from "../types/Interfaces";
+import logger from "../util/logger/LoggerImpl";
+import { UserTokenPayload } from "../types/Interfaces";
+import { AuthRequest } from "../types/CustomRequests";
 
 // Doc: Retrieves all user records from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object

@@ -1,6 +1,6 @@
 // Doc: Password hashing and comparison utilities using bcrypt for secure password storage.
 import * as bcrypt from 'bcrypt';
-import logger from './LoggerImpl';
+import logger from '../logger/LoggerImpl';
 
 // Doc: Number of salt rounds for bcrypt (10 is a good balance of security and performance)
 const SALT_ROUNDS = 10;

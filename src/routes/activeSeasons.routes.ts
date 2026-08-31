@@ -1,7 +1,7 @@
 // Doc: Route definitions for active seasons endpoints. All routes are protected by JWT authentication.
 // Doc: Base path: /activeSeasons (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/TokenManager";
+import { protect } from "../util/credentials/TokenManager";
 import * as activeSeasonsController from "../controllers/activeSeasons.controller";
 
 const router = Router();

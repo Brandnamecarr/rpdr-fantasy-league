@@ -1,7 +1,7 @@
 // Doc: Route definitions for queen management endpoints. All routes are protected by JWT authentication.
 // Doc: Base path: /queens (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/TokenManager";
+import { protect } from "../util/credentials/TokenManager";
 import * as queenController from '../controllers/queen.controller';
 
 const router = Router();

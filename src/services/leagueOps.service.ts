@@ -1,9 +1,10 @@
 import prisma from "../db/prisma.client";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 import { getLeague } from "./league.service";
 import { getByFranchiseAndSeason as getQueensByFranchiseAndSeason } from "./queen.service";
 import {League, Roster, User, BracketName} from '@prisma/client';
+import { TalliedEpisodeSurvey } from '../types/Interfaces';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
 import { QueenStatus } from "@prisma/client";
 
@@ -612,15 +613,6 @@ export const getEpisodeHistory = async (franchise: string, season: number) => {
         orderBy: { episode: 'asc' },
     });
 };
-
-export interface TalliedEpisodeSurvey {
-    episode: number;
-    queenOfTheWeek: string[];
-    bottomOfTheWeek: string[];
-    lipSyncWinner: string[];
-    bestDressed: string[];
-    worstDressed: string[];
-}
 
 // Doc: Returns backend-tallied fan survey results per episode (plurality winner per category).
 // Doc: Only includes episodes whose survey window has closed (endDate in the past).

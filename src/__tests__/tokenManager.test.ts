@@ -1,11 +1,11 @@
-jest.mock('../util/LoggerImpl', () => ({
+jest.mock('../util/logger/LoggerImpl', () => ({
     __esModule: true,
     default: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
-import { generateToken, verifyToken, protect } from '../util/TokenManager';
+import { generateToken, verifyToken, protect } from '../util/credentials/TokenManager';
 import { Request, Response, NextFunction } from 'express';
-import { AuthRequest } from '../types/Interfaces';
+import { AuthRequest } from '../types/CustomRequests';
 
 const testUser = { id: 1, email: 'queen@werk.com' };
 

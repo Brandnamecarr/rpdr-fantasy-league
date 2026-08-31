@@ -1,5 +1,5 @@
 import prisma from "../db/prisma.client";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 import { ActivityStatus, BracketName } from "@prisma/client";
 

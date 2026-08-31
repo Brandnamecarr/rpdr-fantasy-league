@@ -1,9 +1,9 @@
-jest.mock('../util/LoggerImpl', () => ({
+jest.mock('../util/logger/LoggerImpl', () => ({
     __esModule: true,
     default: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));
 
-import { hashPassword, comparePassword } from '../util/PasswordManager';
+import { hashPassword, comparePassword } from '../util/credentials/PasswordManager';
 
 describe('PasswordManager', () => {
     describe('hashPassword', () => {

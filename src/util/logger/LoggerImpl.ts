@@ -1,6 +1,7 @@
 // Doc: Logger implementation that writes structured JSON logs to a file.
 // Doc: Exports a singleton logger instance configured for the rpdr-fantasy-app service.
-import { LogLevel, CustomLogger } from "./Logger";
+import { CustomLogger } from "../../types/Interfaces";
+import { LogLevel } from "../../enums/enums";
 import * as fs from 'fs';
 import * as path from 'path';
 

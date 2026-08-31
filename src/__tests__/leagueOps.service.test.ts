@@ -1,4 +1,4 @@
-jest.mock('../util/LoggerImpl', () => ({
+jest.mock('../util/logger/LoggerImpl', () => ({
     __esModule: true,
     default: { debug: jest.fn(), info: jest.fn(), error: jest.fn() },
 }));

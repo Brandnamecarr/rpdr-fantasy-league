@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as notifService from '../services/notification.service';
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? '';
 

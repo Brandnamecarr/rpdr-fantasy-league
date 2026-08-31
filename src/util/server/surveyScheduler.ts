@@ -1,6 +1,6 @@
-import prisma from "../db/prisma.client";
-import logger from "./LoggerImpl";
-import { computeFanSurvey } from "../services/leagueOps.service";
+import prisma from "../../db/prisma.client";
+import logger from "../logger/LoggerImpl";
+import { computeFanSurvey } from "../../services/leagueOps.service";
 
 const INTERVAL_MS = 10 * 60 * 1000; // run every 10 minutes
 

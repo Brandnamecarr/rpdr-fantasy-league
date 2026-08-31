@@ -1,7 +1,7 @@
 // Doc: Route definitions for notification endpoints. All routes are protected by JWT authentication.
 // Doc: Base path: /notifications (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/TokenManager";
+import { protect } from "../util/credentials/TokenManager";
 import * as notifController from '../controllers/notification.controller';
 
 const router = Router();

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as leagueService from "../services/league.service";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 // Doc: Retrieves a specific league record by league name, franchise, and season.
 // Doc: Args: req (Request) - Express request object with body containing {leagueName: string, franchise: string, season: number}, res (Response) - Express response object

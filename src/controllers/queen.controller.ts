@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as queenService from '../services/queen.service';
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 import * as INTERFACES from '../types/Interfaces';
 import { QueenStatus } from "@prisma/client";
 

@@ -1,5 +1,5 @@
 import prisma from "../db/prisma.client";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 // Doc: Queries the database for all notifications sent to a specific user's email.
 // Doc: Args: email (string) - The destination email address

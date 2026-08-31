@@ -1,7 +1,7 @@
 // Doc: Route definitions for user management endpoints. Auth and create routes are public; other routes require JWT authentication.
 // Doc: Base path: /users (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/TokenManager";
+import { protect } from "../util/credentials/TokenManager";
 import * as userController from "../controllers/user.controller";
 
 const router = Router();

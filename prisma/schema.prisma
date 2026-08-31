@@ -149,6 +149,14 @@ model EpisodeResult {
   @@unique([franchise, season, episode])
 }
 
+model WorkflowExecutionResults {
+  id         Int      @id @default(autoincrement())
+  name       String
+  startedAt  DateTime
+  finishedAt DateTime
+  result     String
+}
+
 model SeasonFinaleResponse {
   id              Int      @id @default(autoincrement())
   franchise       String

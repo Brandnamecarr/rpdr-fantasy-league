@@ -1,5 +1,5 @@
 import prisma from "../db/prisma.client";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 // Doc: Queries the database for a specific league by name, franchise, and season.
 // Doc: Args: leaguename (string) - The league name, franchise (string) - The franchise name, season (number) - The season number
@@ -164,6 +164,16 @@ export const getInactiveLeaguesByUser = async (email: string) => {
 
     const inactiveSet = new Set(inactiveSeasons.map(s => `${s.franchise}:${s.season}`));
     return userLeagues.filter(l => inactiveSet.has(`${l.franchise}:${l.season}`));
+};
+
+// Doc: Queries every league in a franchise/season, regardless of available spots.
+// Doc: Args: franchise (string) - The franchise name, season (number) - The season number
+// Doc: Returns: Promise<League[]> - All league records matching franchise and season
+export const getLeaguesByFranchiseAndSeason = (franchise: string, season: number) => {
+    logger.debug('League.Service.ts: getLeaguesByFranchiseAndSeason() - fetching leagues', {franchise, season});
+    return prisma.league.findMany({
+        where: { franchise, season },
+    });
 };
 
 // Doc: Queries leagues by franchise and season, then filters for those with available spots.

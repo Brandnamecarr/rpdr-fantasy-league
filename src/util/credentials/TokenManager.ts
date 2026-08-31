@@ -1,9 +1,10 @@
 // Doc: JWT token management utilities for authentication and route protection.
 // Doc: Includes functions for generating, verifying tokens, and protecting routes with middleware.
 import jwt from 'jsonwebtoken';
-import logger from './LoggerImpl';
+import logger from '../logger/LoggerImpl';
 import { NextFunction, Request, Response } from 'express';
-import { AuthRequest, UserTokenPayload } from '../types/Interfaces';
+import { UserTokenPayload } from '../../types/Interfaces';
+import { AuthRequest } from '../../types/CustomRequests';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
 

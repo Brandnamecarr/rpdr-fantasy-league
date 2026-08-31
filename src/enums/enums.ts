@@ -45,3 +45,10 @@ export enum FanSurveyPoints {
     WORST_DRESSED   =  -5
 }
 
+// Doc: Log severity levels used by the logger utility (see util/logger/LoggerImpl.ts)
+export enum LogLevel {
+    ERROR=0,
+    INFO=1,
+    DEBUG=2
+}
+

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import * as seasonService from "../services/activeSeasons.service";
-import logger from "../util/LoggerImpl";
+import logger from "../util/logger/LoggerImpl";
 
 // Doc: Retrieves all seasons with active status from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object

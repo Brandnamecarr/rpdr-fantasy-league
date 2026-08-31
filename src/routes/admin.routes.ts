@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { protectAdmin } from '../util/TokenManager';
+import { protectAdmin } from '../util/credentials/TokenManager';
 import * as adminController from '../controllers/admin.controller';
 
 const router = Router();
@@ -32,5 +32,9 @@ router.get('/brackets',            protectAdmin, adminController.getAdminBracket
 
 // Log viewer
 router.get('/logs',                protectAdmin, adminController.getLogs);
+
+// Workflows
+router.post('/workflows/execute',            protectAdmin, adminController.executeWorkflow);
+router.get('/workflows/status/:executionId', protectAdmin, adminController.getWorkflowStatus);
 
 export default router;
