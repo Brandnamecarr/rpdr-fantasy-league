@@ -12,6 +12,9 @@ export interface LoginRequest extends Request {
 
 // Doc: Extended Express Request with authenticated user information
 // Doc: Properties: user (UserTokenPayload?) - optional decoded JWT payload attached by auth middleware
-export interface AuthRequest extends Request {
+// Doc: Generic ReqBody param lets callers type req.body (e.g. AuthRequest<UpdateDisplayNameBody>)
+// Doc: instead of falling back to Request's default `any` body type. Defaults to `unknown` so a
+// Doc: caller that doesn't need a typed body still can't destructure it without narrowing first.
+export interface AuthRequest<ReqBody = unknown> extends Request<Record<string, string>, unknown, ReqBody> {
     user?: UserTokenPayload;
 }

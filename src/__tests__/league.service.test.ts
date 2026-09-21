@@ -22,6 +22,7 @@ jest.mock('../db/prisma.client', () => ({
 
 import prisma from '../db/prisma.client';
 import { getInactiveLeaguesByUser, getAvailableLeagues } from '../services/league.service';
+import { League, ActiveSeasons, ActivityStatus } from '@prisma/client';
 
 const p = prisma as unknown as {
     league: { findMany: jest.Mock; findUnique: jest.Mock; create: jest.Mock };
@@ -29,7 +30,7 @@ const p = prisma as unknown as {
     roster: { create: jest.Mock };
 };
 
-const makeLeague = (overrides: Partial<any> = {}): any => ({
+const makeLeague = (overrides: Partial<League> = {}): League => ({
     id: 1,
     leagueName: 'TestLeague',
     owner: 'owner@werk.com',
@@ -42,12 +43,16 @@ const makeLeague = (overrides: Partial<any> = {}): any => ({
     ...overrides,
 });
 
-const makeSeason = (franchise: string, season: number, status: string): any => ({
-    id: 1,
+const makeSeason = (franchise: string, season: number, status: ActivityStatus): ActiveSeasons => ({
+    seasonId: 1,
     franchise,
     season,
     activityStatus: status,
-    createdAt: new Date(),
+    premiereDate: null,
+    isUsingBrackets: false,
+    bracketCount: null,
+    startDate: null,
+    endDate: null,
 });
 
 beforeEach(() => {

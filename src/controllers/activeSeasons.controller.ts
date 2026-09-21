@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as seasonService from "../services/activeSeasons.service";
 import logger from "../util/logger/LoggerImpl";
+import { CaughtError } from "../types/Interfaces";
 
 // Doc: Retrieves all seasons with active status from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
@@ -132,8 +133,8 @@ export const addBracket = async (req: Request, res: Response) => {
         const response = await seasonService.addBracket(franchise, seasonAsInt, bracketName, queens);
         logger.info('ActiveSeasons.Controller: addBracket() - bracket created', {franchise, season: seasonAsInt, bracketName});
         return res.status(201).json(response);
-    } catch (error: any) {
-        if (error?.code === 'P2002') {
+    } catch (error) {
+        if ((error as CaughtError)?.code === 'P2002') {
             return res.status(409).json({ Error: `Bracket ${bracketName} already exists for ${franchise} Season ${season}` });
         }
         logger.error('ActiveSeasons.Controller: addBracket() - error', {error});

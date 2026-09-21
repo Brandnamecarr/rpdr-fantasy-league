@@ -3,12 +3,18 @@ import * as leagueOpsService from '../services/leagueOps.service';
 import logger from "../util/logger/LoggerImpl";
 import * as leagueService from '../services/league.service';
 import { getSeasonRecord, getSurveyWindow } from '../services/activeSeasons.service';
+import { AuthRequest } from '../types/CustomRequests';
+import {
+    WeeklyUpdateBody, WeeklySurveyBody, AddUserToLeagueBody, RemoveUserFromLeagueBody,
+    GetRostersByLeagueBody, OpenFanSurveyBody, SubmitFanSurveyBody, ComputeFanSurveyBody,
+    SubmitSeasonFinaleBody, IncreaseLeagueSizeBody, CaughtError,
+} from '../types/Interfaces';
 
 import {League, User, Roster} from '@prisma/client';
 
 // Doc: Processes weekly episode results and updates point totals for all affected rosters.
 // Doc: Body: {franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName?}
-export const weeklyUpdate = async (req: Request, res: Response) => {
+export const weeklyUpdate = async (req: Request<unknown, unknown, WeeklyUpdateBody>, res: Response) => {
     const {franchise, season, episode, maxiWinner, isSnatchGame, miniWinner, topQueens, safeQueens, bottomQueens, lipSyncWinner, eliminated, bracketName} = req.body;
     logger.info('LeagueOps.Controller.ts: weeklyUpdate() - request received', {franchise, season, episode, maxiWinner, isSnatchGame, eliminated, bracketName});
 
@@ -27,9 +33,9 @@ export const weeklyUpdate = async (req: Request, res: Response) => {
 };
 
 // Doc: Processes weekly survey results including toots, boots, iconic/cringe queens, and queen of the week.
-// Doc: Args: req (Request) - Express request object with body containing {toots: any[], boots: any[], iconicQueens: any[], cringeQueens: any[], queenOfTheWeek: any}, res (Response) - Express response object
+// Doc: Args: req (Request<unknown, unknown, WeeklySurveyBody>) - Express request object with body containing {toots: string[], boots: string[], iconicQueens: string[], cringeQueens: string[], queenOfTheWeek: string[]}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/weekly-survey
-export const weeklySurvey = async (req: Request, res: Response) => {
+export const weeklySurvey = async (req: Request<unknown, unknown, WeeklySurveyBody>, res: Response) => {
     const {franchise, season, toots, boots, iconicQueens, cringeQueens, queenOfTheWeek, bracketName} = req.body;
     logger.info('LeagueOps.Controller.ts: weeklySurvey() - request received', {franchise, season, tootCount: toots?.length, bootCount: boots?.length, queenOfTheWeek, bracketName});
 
@@ -53,9 +59,9 @@ export const weeklySurvey = async (req: Request, res: Response) => {
 };
 
 // Doc: Adds a user to an existing league with their team name and selected queens.
-// Doc: Args: req (Request) - Express request object with body containing {username: string, teamName: string, leagueName: string, queens: any[], franchise: string, season: number}, res (Response) - Express response object
+// Doc: Args: req (Request<unknown, unknown, AddUserToLeagueBody>) - Express request object with body containing {username: string, teamName: string, leagueName: string, queens: string[], franchise: string, season: number}, res (Response) - Express response object
 // Doc: Route: Likely POST /league-ops/add-user
-export const addUserToLeague = async (req: Request, res: Response) => {
+export const addUserToLeague = async (req: Request<unknown, unknown, AddUserToLeagueBody>, res: Response) => {
     const {username, teamName, leagueName, queens, franchise, season} = req.body;
     logger.debug('LeagueOps.Controller.ts: addUserToLeague() called with: ', {username, teamName, leagueName, franchise, season});
     try {
@@ -89,7 +95,7 @@ export const addUserToLeague = async (req: Request, res: Response) => {
 // Doc: Removes a user from an existing league.
 // Doc: Args: req (Request) - Express request object with body containing {email: string, leagueName: string, franchise: string, season: number}, res (Response) - Express response object
 // Doc: Route: Likely DELETE /league-ops/remove-user or POST /league-ops/remove-user
-export const removeUserFromLeague = async (req: Request, res: Response) => {
+export const removeUserFromLeague = async (req: Request<unknown, unknown, RemoveUserFromLeagueBody>, res: Response) => {
     const {email, leagueName, franchise, season} = req.body;
     logger.info('LeagueOps.Controller.ts: removeUserFromLeague() - request received', {email, leagueName, franchise, season});
     try {
@@ -114,7 +120,7 @@ export const removeUserFromLeague = async (req: Request, res: Response) => {
 // Doc: Retrieves all team rosters for a specific league.
 // Doc: Args: req (Request) - Express request object with body containing {email: string, token: string, leagueName: string}, res (Response) - Express response object
 // Doc: Route: Likely GET /league-ops/rosters/league or POST /league-ops/rosters/league
-export const getAllRostersByLeague = async (req: Request, res: Response) => {
+export const getAllRostersByLeague = async (req: Request<unknown, unknown, GetRostersByLeagueBody>, res: Response) => {
     const { leagueName } = req.body;
     logger.debug('LeagueOps.Controller.ts: Finding roster for league: ', {leagueName});
     try {
@@ -183,7 +189,7 @@ export const getRostersByFranchiseAndSeason = async (req: Request, res: Response
 // Doc: Opens (or updates) a fan survey window for a franchise/season/episode. Called by the tools after copying episode images.
 // Doc: Body: {franchise, season, episode, startDate?, endDate?} — startDate defaults to now, endDate defaults to 7 days from now.
 // Doc: Route: POST /leagueOps/openFanSurvey
-export const openFanSurvey = async (req: Request, res: Response) => {
+export const openFanSurvey = async (req: Request<unknown, unknown, OpenFanSurveyBody>, res: Response) => {
     const { franchise, season, episode, startDate, endDate } = req.body;
 
     if (!franchise || !season || !episode) {
@@ -208,8 +214,8 @@ export const openFanSurvey = async (req: Request, res: Response) => {
 // Doc: Returns all currently-open fan surveys for which the requesting user has a roster (i.e., is participating).
 // Doc: Each record includes a hasVoted flag.
 // Doc: Route: GET /leagueOps/getOpenSurveys
-export const getOpenSurveys = async (req: Request, res: Response) => {
-    const email = (req as any).user?.email;
+export const getOpenSurveys = async (req: AuthRequest, res: Response) => {
+    const email = req.user!.email;
 
     logger.info('LeagueOps.Controller.ts: getOpenSurveys() - request received', { email });
 
@@ -224,8 +230,8 @@ export const getOpenSurveys = async (req: Request, res: Response) => {
 
 // Doc: Returns all surveys (open + closed) for the authenticated user's franchise/seasons.
 // Doc: Route: GET /leagueOps/getAllSurveys
-export const getAllSurveys = async (req: Request, res: Response) => {
-    const email = (req as any).user?.email;
+export const getAllSurveys = async (req: AuthRequest, res: Response) => {
+    const email = req.user!.email;
     logger.info('LeagueOps.Controller.ts: getAllSurveys() - request received', { email });
     try {
         const surveys = await leagueOpsService.getAllSurveysForUser(email);
@@ -237,9 +243,9 @@ export const getAllSurveys = async (req: Request, res: Response) => {
 };
 
 // Doc: Route: POST /leagueOps/submitFanSurvey
-export const submitFanSurvey = async (req: Request, res: Response) => {
+export const submitFanSurvey = async (req: AuthRequest<SubmitFanSurveyBody>, res: Response) => {
     const { franchise, season, episode, queenOfTheWeek, bottomOfTheWeek, lipSyncWinner, bestDressed, worstDressed } = req.body;
-    const submittedBy = (req as any).user?.email;
+    const submittedBy = req.user!.email;
 
     if (!franchise || !season || !episode || !queenOfTheWeek || !bottomOfTheWeek || !lipSyncWinner || !bestDressed || !worstDressed) {
         logger.error('LeagueOps.Controller.ts: submitFanSurvey() - missing required fields');
@@ -255,17 +261,18 @@ export const submitFanSurvey = async (req: Request, res: Response) => {
         );
         logger.info('LeagueOps.Controller.ts: submitFanSurvey() - response stored successfully');
         return res.status(201).json(resp);
-    } catch (error: any) {
-        if (error?.message === 'SURVEY_NOT_FOUND') {
+    } catch (error) {
+        const err = error as CaughtError;
+        if (err?.message === 'SURVEY_NOT_FOUND') {
             return res.status(404).json({ Error: 'No survey is open for this episode' });
         }
-        if (error?.message === 'SURVEY_CLOSED') {
+        if (err?.message === 'SURVEY_CLOSED') {
             return res.status(403).json({ Error: 'The survey window for this episode is closed' });
         }
-        if (error?.message === 'NOT_ELIGIBLE') {
+        if (err?.message === 'NOT_ELIGIBLE') {
             return res.status(403).json({ Error: 'You are not participating in a league for this franchise and season' });
         }
-        if (error?.code === 'P2002') {
+        if (err?.code === 'P2002') {
             logger.error('LeagueOps.Controller.ts: submitFanSurvey() - duplicate submission', { submittedBy, franchise, season, episode });
             return res.status(409).json({ Error: 'You have already submitted a survey for this episode' });
         }
@@ -277,7 +284,7 @@ export const submitFanSurvey = async (req: Request, res: Response) => {
 // Doc: Tallies fan survey votes for an episode and applies point adjustments to all rosters.
 // Doc: Body: {franchise, season, episode} — should only be called after the Friday-Thursday window closes.
 // Doc: Route: POST /leagueOps/computeFanSurvey
-export const computeFanSurvey = async (req: Request, res: Response) => {
+export const computeFanSurvey = async (req: Request<unknown, unknown, ComputeFanSurveyBody>, res: Response) => {
     const { franchise, season, episode, bracketName } = req.body;
 
     if (!franchise || !season || !episode) {
@@ -308,9 +315,9 @@ export const computeFanSurvey = async (req: Request, res: Response) => {
 // Doc: Stores one season finale survey response per user per season.
 // Doc: Body: {franchise, season, winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved, snatcGameMvp}
 // Doc: Route: POST /leagueOps/submitSeasonFinale
-export const submitSeasonFinale = async (req: Request, res: Response) => {
+export const submitSeasonFinale = async (req: AuthRequest<SubmitSeasonFinaleBody>, res: Response) => {
     const { franchise, season, winner, runnerUp, missCongeniality, bestDressed, fanFavorite, tradeOfTheSeason, mostImproved } = req.body;
-    const submittedBy = (req as any).user?.email;
+    const submittedBy = req.user!.email;
 
     if (!franchise || !season || !winner || !runnerUp || !missCongeniality || !bestDressed || !fanFavorite || !tradeOfTheSeason || !mostImproved) {
         logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - missing required fields');
@@ -338,8 +345,8 @@ export const submitSeasonFinale = async (req: Request, res: Response) => {
         );
         logger.info('LeagueOps.Controller.ts: submitSeasonFinale() - response stored successfully');
         return res.status(201).json(resp);
-    } catch (error: any) {
-        if (error?.code === 'P2002') {
+    } catch (error) {
+        if ((error as CaughtError)?.code === 'P2002') {
             logger.error('LeagueOps.Controller.ts: submitSeasonFinale() - duplicate submission', { submittedBy, franchise, season });
             return res.status(409).json({ Error: 'You have already submitted a finale survey for this season' });
         }
@@ -383,9 +390,9 @@ export const getTalliedFanSurveyResults = async (req: Request, res: Response) =>
 // Doc: Increases the maxPlayers cap for a league. Only the league owner may call this.
 // Doc: Args: req (Request) - body containing {leagueName, franchise, season, newMaxPlayers}, res (Response)
 // Doc: Route: POST /leagueOps/increaseLeagueSize
-export const increaseLeagueSize = async (req: Request, res: Response) => {
+export const increaseLeagueSize = async (req: AuthRequest<IncreaseLeagueSizeBody>, res: Response) => {
     const { leagueName, franchise, season, newMaxPlayers } = req.body;
-    const requestingEmail = (req as any).user?.email;
+    const requestingEmail = req.user!.email;
 
     if (!leagueName || !franchise || !season || newMaxPlayers == null) {
         logger.error('LeagueOps.Controller.ts: increaseLeagueSize() - missing required fields');

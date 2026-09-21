@@ -94,6 +94,22 @@ export const getSeasonRecord = (franchise: string, season: number) => {
     });
 };
 
+// Doc: Upserts an upcoming season's premiere date — creates the ActiveSeasons record (as INACTIVE)
+// Doc: if it doesn't exist yet, or updates premiereDate on the existing record without touching its
+// Doc: activityStatus (so this never demotes a season that's already ACTIVE). Meant to be called by
+// Doc: the FetchUpcomingSeasons workflow (src/workflows/fetchUpcomingSeasons.ts) once its data source
+// Doc: is chosen — not exposed over HTTP, since the workflow calls it directly in-process.
+// Doc: Args: franchise (string), season (number), premiereDate (string | undefined) - e.g. "2027-01-02"
+// Doc: Returns: Promise<ActiveSeasons> - The created or updated season record
+export const setUpcomingSeason = (franchise: string, season: number, premiereDate?: string) => {
+    logger.info('ActiveSeasons.Service.ts: setUpcomingSeason() - upserting upcoming season', {franchise, season, premiereDate});
+    return prisma.activeSeasons.upsert({
+        where: { franchise_season: { franchise, season } },
+        update: { ...(premiereDate !== undefined && { premiereDate }) },
+        create: { franchise, season, premiereDate },
+    });
+};
+
 // Doc: Length of the season finale survey window, in days before a season's endDate.
 export const SEASON_FINALE_SURVEY_WINDOW_DAYS = 7;
 

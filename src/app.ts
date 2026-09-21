@@ -14,6 +14,7 @@ import notifRoutes from './routes/notification.routes';
 import queenRoutes from './routes/queen.routes';
 import activeSeasonRoutes from './routes/activeSeasons.routes';
 import adminRoutes from './routes/admin.routes';
+import { recordVisit } from './services/siteVisit.service';
 
 // Doc: Express app instance with middleware configuration
 const app = express();
@@ -39,6 +40,13 @@ app.use(express.json());
 //      Returns 200 immediately — no auth required.
 app.get('/health', (_req: Request, res: Response) => {
     res.status(200).json({ status: 'ok' });
+});
+
+// Doc: Public (no-auth) visit-tracking beacon. The React app calls this once on home page load so
+//      anonymous/logged-out traffic is counted, not just authenticated requests.
+app.get('/track/ping', (req: Request, res: Response) => {
+    recordVisit(req.ip ?? 'unknown'); // fire-and-forget — must never delay or fail the response
+    res.status(204).end();
 });
 
 // Doc: Route definitions mapping URL paths to route handlers

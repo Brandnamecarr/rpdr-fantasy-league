@@ -29,7 +29,7 @@ export async function hashPassword(password: string): Promise<string> {
 export async function comparePassword(plaintextPassword: string, hash: string): Promise<boolean> {
     try {
         const isMatch = await bcrypt.compare(plaintextPassword, hash);
-        logger.debug('PasswordManager.ts: passwords match');
+        logger.debug('PasswordManager.ts: comparePassword() result', {isMatch});
         return isMatch;
     } catch (error) {
         logger.error('PasswordManager.ts: error in comparePasswords');

@@ -39,6 +39,7 @@ import {
     computeFanSurvey,
 } from '../services/leagueOps.service';
 import { PointManipulation, FanSurveyPoints } from '../enums/enums';
+import { League, Roster } from '@prisma/client';
 
 // Typed convenience reference to the prisma mock
 const p = prisma as unknown as {
@@ -50,7 +51,7 @@ const p = prisma as unknown as {
     $transaction: jest.Mock;
 };
 
-const makeRoster = (overrides: Partial<any> = {}): any => ({
+const makeRoster = (overrides: Partial<Roster> = {}): Roster => ({
     recordId: 1,
     leagueName: 'TestLeague',
     username: 'queen@werk.com',
@@ -63,7 +64,7 @@ const makeRoster = (overrides: Partial<any> = {}): any => ({
     ...overrides,
 });
 
-const makeLeague = (overrides: Partial<any> = {}): any => ({
+const makeLeague = (overrides: Partial<League> = {}): League => ({
     id: 1,
     leagueName: 'TestLeague',
     owner: 'owner@werk.com',
@@ -79,7 +80,7 @@ const makeLeague = (overrides: Partial<any> = {}): any => ({
 beforeEach(() => {
     jest.clearAllMocks();
     // Default $transaction to execute the array of promises
-    p.$transaction.mockImplementation((promises: any[]) => Promise.all(promises));
+    p.$transaction.mockImplementation((promises: Promise<unknown>[]) => Promise.all(promises));
     // Default update to resolve with a dummy roster
     p.roster.update.mockResolvedValue(makeRoster());
 });
@@ -376,9 +377,9 @@ describe('computeFanSurvey', () => {
 
         await computeFanSurvey('US', 17, 1);
 
-        const calls = p.roster.update.mock.calls;
-        const sashaCall = calls.find((c: any[]) => c[0].where.recordId === 1);
-        const katyaCall = calls.find((c: any[]) => c[0].where.recordId === 2);
+        const calls = p.roster.update.mock.calls as { where: { recordId: number }; data: { currentPoints: { set: number } } }[][];
+        const sashaCall = calls.find((c) => c[0].where.recordId === 1);
+        const katyaCall = calls.find((c) => c[0].where.recordId === 2);
 
         // Both tied queens should receive QUEEN_OF_WEEK points
         expect(sashaCall![0].data.currentPoints.set).toBe(FanSurveyPoints.QUEEN_OF_WEEK);

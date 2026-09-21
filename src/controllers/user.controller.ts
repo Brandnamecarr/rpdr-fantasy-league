@@ -4,7 +4,7 @@ import * as passwordManager from "../util/credentials/PasswordManager";
 import * as tokenManager from '../util/credentials/TokenManager';
 import * as notificationService from '../services/notification.service';
 import logger from "../util/logger/LoggerImpl";
-import { UserTokenPayload } from "../types/Interfaces";
+import { UserTokenPayload, UpdateDisplayNameBody, CaughtError } from "../types/Interfaces";
 import { AuthRequest } from "../types/CustomRequests";
 
 // Doc: Retrieves all user records from the database.
@@ -59,8 +59,8 @@ export const createUser = async (req: Request, res: Response) => {
             user: user,
             token: token
         }); 
-    } catch(error: any) {
-        if (error?.code === 'P2002') {
+    } catch(error) {
+        if ((error as CaughtError)?.code === 'P2002') {
             logger.error('User.Controller.ts: createUser() - duplicate email', {email});
             return res.status(409).json({Error: "Email already registered"});
         }
@@ -163,7 +163,7 @@ export const getDisplayNames = async (req: Request, res: Response) => {
 // Doc: Updates the display name for the authenticated user.
 // Doc: Args: req (AuthRequest) - Express request with JWT user, res (Response) - Express response object
 // Doc: Route: PATCH /users/displayName
-export const updateDisplayName = async (req: AuthRequest, res: Response) => {
+export const updateDisplayName = async (req: AuthRequest<UpdateDisplayNameBody>, res: Response) => {
     const { displayName } = req.body;
     const email = req.user!.email;
 
@@ -180,6 +180,30 @@ export const updateDisplayName = async (req: AuthRequest, res: Response) => {
     } catch(error) {
         logger.error('User.Controller.ts: updateDisplayName() - unexpected error', {email, error});
         return res.status(500).json({ Error: `Error updating display name for ${email}` });
+    }
+};
+
+// Doc: Sets (or clears) a user's isAdmin flag. Admin-key protected (see user.routes.ts) — this is
+// Doc: a privileged action, not something a regular JWT-authenticated user can call on themselves.
+// Doc: Args: req (Request) - body containing {email: string, isAdmin: boolean}, res (Response)
+// Doc: Route: POST /users/setAdmin
+export const setAdmin = async (req: Request, res: Response) => {
+    const { email, isAdmin } = req.body;
+    if (!email || typeof isAdmin !== 'boolean') {
+        logger.error('User.Controller.ts: setAdmin() - missing email or isAdmin (boolean)', {email, isAdmin});
+        return res.status(400).json({ Error: 'email and isAdmin (boolean) are required' });
+    }
+    try {
+        const updated = await userService.setAdmin(email, isAdmin);
+        logger.info('User.Controller.ts: setAdmin() - updated', {email: updated.email, isAdmin: updated.isAdmin});
+        return res.status(200).json({ email: updated.email, isAdmin: updated.isAdmin });
+    } catch (error) {
+        if ((error as CaughtError)?.code === 'P2025') {
+            logger.error('User.Controller.ts: setAdmin() - user not found', {email});
+            return res.status(404).json({ Error: `User ${email} not found` });
+        }
+        logger.error('User.Controller.ts: setAdmin() - unexpected error', {email, error});
+        return res.status(500).json({ Error: `Error updating isAdmin for ${email}` });
     }
 };
 

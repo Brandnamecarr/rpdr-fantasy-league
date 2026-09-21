@@ -1,15 +1,20 @@
 // Doc: LookFinder scrapes queen look photos for a franchise/season/episode from the Drag Race fandom
-// Doc: wiki and validates that every currently-active queen in that franchise/season has a matching
-// Doc: uploaded file. `id` is the contract with the frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS
-// Doc: list) — keep it in sync if either side changes. Unlike the other workflows here, LookFinder
-// Doc: requires `input` (see LookFinderInput in types/Interfaces.ts) passed through
-// Doc: POST /admin/workflows/execute.
+// Doc: wiki, validates that every currently-active queen in that franchise/season has a matching
+// Doc: uploaded file, then opens that episode's weekly fan survey. `id` is the contract with the
+// Doc: frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) — keep it in sync if either side
+// Doc: changes. Unlike the other workflows here, LookFinder requires `input` (see LookFinderInput in
+// Doc: types/Interfaces.ts) passed through POST /admin/workflows/execute.
 import * as cheerio from 'cheerio';
+import { BracketName } from '@prisma/client';
+import prisma from '../db/prisma.client';
 import logger from '../util/logger/LoggerImpl';
 import { putFile, listKeys } from '../util/aws/S3Manager';
 import { getByFranchiseAndSeason } from '../services/queen.service';
+import { openFanSurvey } from '../services/leagueOps.service';
 import { WorkflowDefinition, WorkflowInput, LookFinderInput } from '../types/Interfaces';
 import { FRANCHISE_WIKI_PAGES, NON_RUNWAY_HEADER_KEYWORDS, EXTENSION_CONTENT_TYPES } from './workflow.constants';
+
+const BRACKET_NAMES: BracketName[] = ['A', 'B', 'C'];
 
 // Doc: Narrows/validates the generic WorkflowInput bag into the franchise/season/episode LookFinder needs.
 // Doc: Throws (failing the step, surfaced to the admin UI) if the required fields are missing or malformed.
@@ -17,6 +22,7 @@ function parseLookFinderInput(input?: WorkflowInput): LookFinderInput {
     const franchise = input?.franchise;
     const season = input?.season;
     const episode = input?.episode;
+    const bracketName = input?.bracketName;
 
     if (typeof franchise !== 'string' || !franchise) {
         throw new Error('LookFinder requires a franchise (string)');
@@ -27,8 +33,11 @@ function parseLookFinderInput(input?: WorkflowInput): LookFinderInput {
     if (typeof episode !== 'number') {
         throw new Error('LookFinder requires an episode (number)');
     }
+    if (bracketName !== undefined && !BRACKET_NAMES.includes(bracketName as BracketName)) {
+        throw new Error(`LookFinder bracketName must be one of ${BRACKET_NAMES.join(', ')}`);
+    }
 
-    return { franchise, season, episode };
+    return { franchise, season, episode, bracketName: bracketName as BracketName | undefined };
 }
 
 // Doc: S3 key prefix images are stored/looked-up under for a given franchise/season/episode.
@@ -41,6 +50,20 @@ const slugify = (value: string): string =>
 
 const FANDOM_API = 'https://rupaulsdragrace.fandom.com/api.php';
 const USER_AGENT = 'rpdr-fantasy-league/1.0';
+
+// Doc: Shape of the MediaWiki `action=parse` API response used by fetchWikiHtml() — only the
+// Doc: fields this workflow actually reads (rendered page HTML, or an API-level error).
+interface MediaWikiParseResponse {
+    error?: {
+        info?: string;
+        [key: string]: unknown;
+    };
+    parse?: {
+        text?: {
+            '*'?: string;
+        };
+    };
+}
 
 // Doc: Words stripped from a table header / runway theme before comparing them so that
 // Doc: "It's Giving Crowned Queen" matches a header of "It's Giving Crowned Queen Look".
@@ -67,7 +90,7 @@ async function fetchWikiHtml(page: string): Promise<string> {
     if (!resp.ok) {
         throw new Error(`Fandom wiki request failed (HTTP ${resp.status})`);
     }
-    const data: any = await resp.json();
+    const data = await resp.json() as MediaWikiParseResponse;
     if (data.error) {
         throw new Error(`MediaWiki API error: ${data.error.info ?? JSON.stringify(data.error)}`);
     }
@@ -168,6 +191,10 @@ function parseEpisodeSection(html: string, episode: number): EpisodeSection {
         .filter(Boolean);
     const panels = tabber.children('div.wds-tab__content').toArray();
 
+    logger.debug('LookFinder-L1-Scrape: parsed tabber', {
+        episode, tabNames, tabCount: tabNames.length, panelCount: panels.length,
+    });
+
     if (tabNames.length === 0 || tabNames.length !== panels.length) {
         throw new Error(`Images for Episode ${episode} have not been published to the wiki yet.`);
     }
@@ -183,6 +210,7 @@ function parseEpisodeSection(html: string, episode: number): EpisodeSection {
         const cells = panel.find('table.wikitable tr').eq(1).find('td').toArray();
 
         if (headers.length === 0 || cells.length === 0) {
+            logger.debug('LookFinder-L1-Scrape: no wikitable found for tab', { name, headerCount: headers.length, cellCount: cells.length });
             missing.push(name);
             continue;
         }
@@ -209,6 +237,9 @@ function parseEpisodeSection(html: string, episode: number): EpisodeSection {
         }
 
         if (columnIndex === -1 || columnIndex >= cells.length) {
+            logger.debug('LookFinder-L1-Scrape: no matching column for runway theme', {
+                name, runwayTheme, normalizedTheme, headers,
+            });
             missing.push(name);
             continue;
         }
@@ -216,10 +247,16 @@ function parseEpisodeSection(html: string, episode: number): EpisodeSection {
         const img = $(cells[columnIndex]).find('img').first();
         const rawUrl = img.attr('data-src') || img.attr('src') || '';
         if (!rawUrl || rawUrl.startsWith('data:')) {
+            logger.debug('LookFinder-L1-Scrape: no usable image src in matched column', {
+                name, columnIndex, header: headers[columnIndex], rawUrl,
+            });
             missing.push(name);
             continue;
         }
 
+        logger.debug('LookFinder-L1-Scrape: matched look for tab', {
+            name, columnIndex, header: headers[columnIndex], imgUrl: rawUrl,
+        });
         looks.push({ name, imgUrl: normalizeImgUrl(rawUrl) });
     }
 
@@ -236,6 +273,8 @@ function parseEpisodeSection(html: string, episode: number): EpisodeSection {
 // Doc: season's DB queen names (e.g. "Akeria Davenport") via bigram similarity. Throws if any
 // Doc: scraped name can't be matched confidently, or if two scraped names collide on one DB name.
 function matchQueenNames(scrapedNames: string[], dbNames: string[]): Map<string, string> {
+    logger.debug('LookFinder-L1-Scrape: matching scraped names against DB roster', { scrapedNames, dbNames });
+
     const normalizedDbNames = dbNames.map(n => ({ original: n, normalized: normalizeForCompare(n) }));
     const mapping = new Map<string, string>();
     const failed: string[] = [];
@@ -249,6 +288,9 @@ function matchQueenNames(scrapedNames: string[], dbNames: string[]): Map<string,
                 best = { original: candidate.original, score };
             }
         }
+        logger.debug('LookFinder-L1-Scrape: name match result', {
+            scraped, bestMatch: best?.original, score: best?.score,
+        });
         if (best && best.score >= 0.5) {
             mapping.set(scraped, best.original);
         } else {
@@ -277,12 +319,24 @@ function extensionFromUrl(url: string): string {
     return match ? match[1].toLowerCase() : 'jpg';
 }
 
+// Doc: Looks up a bracket's queen-name roster (Bracket.queens), throwing if the bracket doesn't exist
+// Doc: for this franchise/season. Shared by both steps so a selected bracket scopes the whole run.
+async function resolveBracketQueenNames(franchise: string, season: number, bracketName: BracketName): Promise<Set<string>> {
+    const bracket = await prisma.bracket.findFirst({ where: { franchise, season, bracketName } });
+    if (!bracket) {
+        throw new Error(`No bracket '${bracketName}' found for ${franchise} season ${season}`);
+    }
+    return new Set(bracket.queens);
+}
+
 // Doc: Step 1 — scrapes this episode's runway-theme look photo for every queen tabbed on the
 // Doc: franchise/season's fandom wiki Looks page, and uploads each to S3 under this episode's prefix,
 // Doc: named after the matching DB queen (images/{franchise}/{season}/{episode}/{queenName}.{ext}).
+// Doc: If bracketName is given, scraped names are only matched against that bracket's roster instead
+// Doc: of the full season roster — otherwise all queens for that franchise/season are candidates.
 async function scrapeQueenImages(input?: WorkflowInput): Promise<string> {
     const lookFinderInput = parseLookFinderInput(input);
-    const { franchise, season, episode } = lookFinderInput;
+    const { franchise, season, episode, bracketName } = lookFinderInput;
 
     const page = buildWikiPage(franchise, season);
     logger.info('LookFinder-L1-Scrape: fetching wiki page', { page });
@@ -293,7 +347,14 @@ async function scrapeQueenImages(input?: WorkflowInput): Promise<string> {
         runwayTheme, queenCount: looks.length,
     });
 
-    const queens = await getByFranchiseAndSeason(franchise, season);
+    let queens = await getByFranchiseAndSeason(franchise, season);
+    if (bracketName) {
+        const bracketQueens = await resolveBracketQueenNames(franchise, season, bracketName);
+        queens = queens.filter(q => bracketQueens.has(q.name));
+        logger.debug('LookFinder-L1-Scrape: filtered to bracket roster', {
+            bracketName, bracketQueenCount: bracketQueens.size, filteredQueenCount: queens.length,
+        });
+    }
     const nameMap = matchQueenNames(looks.map(l => l.name), queens.map(q => q.name));
 
     const prefix = buildPrefix(lookFinderInput);
@@ -315,21 +376,37 @@ async function scrapeQueenImages(input?: WorkflowInput): Promise<string> {
     return `Uploaded ${looks.length} image(s) for runway theme "${runwayTheme}" to ${prefix}`;
 }
 
-// Doc: Step 2 — every currently-ACTIVE queen in the franchise/season must have a matching S3 object
-// Doc: (by slugified filename stem) under this episode's prefix. Throws (failing the step) if any
-// Doc: active queen has no matching file.
+// Doc: Step 2 — every currently-ACTIVE queen expected to compete this episode must have a matching S3
+// Doc: object (by slugified filename stem) under this episode's prefix. If bracketName is given, only
+// Doc: that bracket's active queens are expected to have a look this episode — the wiki only ever
+// Doc: publishes looks for the bracket competing that week, so comparing against the full season
+// Doc: roster would always report the other bracket(s) as "missing". Without a bracketName, every
+// Doc: ACTIVE queen in the season is expected to have a look. Throws (failing the step) if any
+// Doc: expected queen has no matching file.
 async function validateQueenImages(input?: WorkflowInput): Promise<string> {
     const lookFinderInput = parseLookFinderInput(input);
-    const { franchise, season } = lookFinderInput;
+    const { franchise, season, bracketName } = lookFinderInput;
     const prefix = buildPrefix(lookFinderInput);
 
     const queens = await getByFranchiseAndSeason(franchise, season);
-    const activeQueens = queens.filter(q => q.status === 'ACTIVE');
+    let activeQueens = queens.filter(q => q.status === 'ACTIVE');
+
+    if (bracketName) {
+        const bracketQueens = await resolveBracketQueenNames(franchise, season, bracketName);
+        activeQueens = activeQueens.filter(q => bracketQueens.has(q.name));
+        logger.debug('LookFinder-L2-Validate: filtered to bracket roster', {
+            bracketName, bracketQueenCount: bracketQueens.size, activeInBracket: activeQueens.length,
+        });
+    }
 
     const keys = await listKeys(prefix);
     const uploadedStems = new Set(
         keys.map(key => slugify(key.slice(prefix.length).replace(/\.[^/.]+$/, '')))
     );
+
+    logger.debug('LookFinder-L2-Validate: comparing active queens to uploaded files', {
+        prefix, keys, uploadedStems: [...uploadedStems], activeQueenNames: activeQueens.map(q => q.name),
+    });
 
     const missing = activeQueens
         .map(q => q.name)
@@ -346,11 +423,28 @@ async function validateQueenImages(input?: WorkflowInput): Promise<string> {
     return `All ${activeQueens.length} active queen(s) have matching image files.`;
 }
 
+// Doc: Window (in days) the fan survey stays open for once LookFinder opens it.
+const SURVEY_WINDOW_DAYS = 6;
+
+// Doc: Step 3 — opens (or extends) this episode's FanSurvey window now that its look images are
+// Doc: confirmed uploaded, so fans can submit their weekly picks. Upsert-based (safe to re-run).
+async function openWeeklySurvey(input?: WorkflowInput): Promise<string> {
+    const { franchise, season, episode } = parseLookFinderInput(input);
+
+    const startDate = new Date();
+    const endDate = new Date(startDate.getTime() + SURVEY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    await openFanSurvey(franchise, season, episode, startDate, endDate);
+
+    logger.info('LookFinder-L3-OpenSurvey: opened weekly survey', { franchise, season, episode, startDate, endDate });
+    return `Opened the weekly survey for ${franchise} season ${season} episode ${episode} (closes ${endDate.toISOString()}).`;
+}
+
 export const lookFinder: WorkflowDefinition = {
     id: 'look-finder',
     name: 'LookFinder',
     steps: [
         { name: 'LookFinder-L1-Scrape', run: scrapeQueenImages },
         { name: 'LookFinder-L2-Validate', run: validateQueenImages },
+        { name: 'LookFinder-L3-OpenSurvey', run: openWeeklySurvey },
     ],
 };

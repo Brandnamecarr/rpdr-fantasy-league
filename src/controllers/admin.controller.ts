@@ -8,9 +8,7 @@ import * as logService from '../services/log.service';
 import * as workflowService from '../services/workflow.service';
 import * as adminService from '../services/admin.service';
 import { generateToken } from '../util/credentials/TokenManager';
-
-// Doc: Email of the seeded admin account (see prisma/reset-admin.ts) used to mint JWTs for the admin panel.
-const ADMIN_ACCOUNT_EMAIL = 'mother@rpdr-fantasy.com';
+import { RestoreDatabaseBody, RestoreFromBackupBody } from '../types/Interfaces';
 
 // Doc: Parses a date query param — matches the convention in activeSeasons.controller.ts (accepts MM-DD-YYYY).
 const parseDateField = (value?: string): Date | undefined => {
@@ -58,17 +56,19 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     }
 };
 
-// Doc: Mints a short-lived user JWT for the seeded admin account, so the admin panel (which only
-// Doc: holds the static admin key) can call JWT-protected (`protect`) routes it doesn't have a
-// Doc: dedicated protectAdmin mirror for. Access to this endpoint is itself gated by protectAdmin,
-// Doc: so no password check is needed here — the admin key already proved who's asking.
+// Doc: Mints a short-lived user JWT for whichever real user has isAdmin=true (set via
+// Doc: POST /users/setAdmin), so the admin panel (which only holds the static admin key) can call
+// Doc: JWT-protected (`protect`) routes it doesn't have a dedicated protectAdmin mirror for. Access
+// Doc: to this endpoint is itself gated by protectAdmin, so no password check is needed here — the
+// Doc: admin key already proved who's asking. If multiple users are flagged isAdmin, the first match
+// Doc: is used.
 // Doc: Route: GET /admin/getJwt
 export const getAdminJwt = async (_req: Request, res: Response) => {
     try {
-        const admin = await prisma.user.findUnique({ where: { email: ADMIN_ACCOUNT_EMAIL } });
+        const admin = await prisma.user.findFirst({ where: { isAdmin: true } });
         if (!admin) {
-            logger.error('Admin.Controller.ts: getAdminJwt() - seeded admin account not found', { email: ADMIN_ACCOUNT_EMAIL });
-            return res.status(404).json({ Error: 'Admin account not found' });
+            logger.error('Admin.Controller.ts: getAdminJwt() - no user with isAdmin=true found');
+            return res.status(404).json({ Error: 'No admin account found — set isAdmin=true on a user via POST /users/setAdmin' });
         }
         const token = generateToken({ id: admin.id, email: admin.email });
         return res.status(200).json({ token });
@@ -186,6 +186,33 @@ export const getAdminQueens = async (req: Request, res: Response) => {
     }
 };
 
+// Doc: Returns the list of table names the admin database viewer can select from (its dropdown options).
+// Doc: Route: GET /admin/tables  (protected by protectAdmin)
+export const getAdminTableNames = async (_req: Request, res: Response) => {
+    try {
+        return res.status(200).json(adminService.listTableNames());
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminTableNames() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to list tables' });
+    }
+};
+
+// Doc: Returns every record of one table, via that table's fetchAll() in the admin.service registry.
+// Doc: Route: GET /admin/tables/:table  (protected by protectAdmin)
+export const getAdminTableRecords = async (req: Request, res: Response) => {
+    const { table } = req.params;
+    try {
+        const records = await adminService.fetchTableRecords(table);
+        if (!records) {
+            return res.status(404).json({ Error: `Unknown table '${table}'` });
+        }
+        return res.status(200).json({ table, count: records.length, records });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getAdminTableRecords() - failed', { error, table });
+        return res.status(500).json({ Error: 'Failed to fetch table records' });
+    }
+};
+
 // Doc: Queries every table in the database and returns the full dump as a JSON object.
 // Doc: User password hashes are omitted from the dump.
 // Doc: Route: GET /admin/dump  (protected by protectAdmin)
@@ -208,7 +235,7 @@ export const dumpDatabase = async (_req: Request, res: Response) => {
 // Doc: Users are restored with a placeholder password ('RESTORE_PLACEHOLDER') since hashes are not included in dumps.
 // Doc: Auto-increment sequences are reset after inserts so new records get correct IDs.
 // Doc: Route: POST /admin/dump  (protected by protectAdmin)
-export const restoreDatabase = async (req: Request, res: Response) => {
+export const restoreDatabase = async (req: Request<unknown, unknown, Partial<RestoreDatabaseBody>>, res: Response) => {
     logger.info('Admin.Controller.ts: restoreDatabase() - starting full database restore');
 
     const { tables } = req.body ?? {};
@@ -216,92 +243,55 @@ export const restoreDatabase = async (req: Request, res: Response) => {
         return res.status(400).json({ Error: 'Invalid dump format: missing tables object' });
     }
 
-    const {
-        users                = { records: [] },
-        leagues              = { records: [] },
-        rosters              = { records: [] },
-        notifications        = { records: [] },
-        queens               = { records: [] },
-        activeSeasons        = { records: [] },
-        brackets             = { records: [] },
-        fanSurveys           = { records: [] },
-        fanSurveyData        = { records: [] },
-        seasonFinaleResponses = { records: [] },
-    } = tables;
-
     try {
-        // Placeholder hash for restored users — passwords were stripped from the dump.
-        const placeholderPassword = await bcrypt.hash('RESTORE_PLACEHOLDER', 10);
-
-        // Wipe every table first (child tables before parents to respect FK constraints).
-        await prisma.$transaction([
-            prisma.seasonFinaleResponse.deleteMany(),
-            prisma.fanSurveyData.deleteMany(),
-            prisma.fanSurvey.deleteMany(),
-            prisma.bracket.deleteMany(),
-            prisma.activeSeasons.deleteMany(),
-            prisma.queen.deleteMany(),
-            prisma.notification.deleteMany(),
-            prisma.roster.deleteMany(),
-            prisma.league.deleteMany(),
-            prisma.user.deleteMany(),
-        ]);
-
-        logger.info('Admin.Controller.ts: restoreDatabase() - all tables wiped');
-
-        // Re-insert each table (skip empty arrays to avoid no-op createMany calls).
-        if (users.records.length > 0) {
-            await prisma.user.createMany({
-                data: users.records.map((u: any) => ({ ...u, password: placeholderPassword })),
-            });
-        }
-        if (leagues.records.length > 0) {
-            await prisma.league.createMany({ data: leagues.records });
-        }
-        if (rosters.records.length > 0) {
-            await prisma.roster.createMany({ data: rosters.records });
-        }
-        if (notifications.records.length > 0) {
-            await prisma.notification.createMany({ data: notifications.records });
-        }
-        if (queens.records.length > 0) {
-            await prisma.queen.createMany({ data: queens.records });
-        }
-        if (activeSeasons.records.length > 0) {
-            await prisma.activeSeasons.createMany({ data: activeSeasons.records });
-        }
-        if (brackets.records.length > 0) {
-            await prisma.bracket.createMany({ data: brackets.records });
-        }
-        // FanSurvey must be restored before FanSurveyData (FK dependency)
-        if (fanSurveys.records.length > 0) {
-            await prisma.fanSurvey.createMany({ data: fanSurveys.records });
-        }
-        if (fanSurveyData.records.length > 0) {
-            await prisma.fanSurveyData.createMany({ data: fanSurveyData.records });
-        }
-        if (seasonFinaleResponses.records.length > 0) {
-            await prisma.seasonFinaleResponse.createMany({ data: seasonFinaleResponses.records });
-        }
-
-        // Reset auto-increment sequences so the next insert doesn't collide with restored IDs.
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"User"', 'id'), COALESCE((SELECT MAX(id) FROM "User"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"League"', 'id'), COALESCE((SELECT MAX(id) FROM "League"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Roster"', 'recordId'), COALESCE((SELECT MAX("recordId") FROM "Roster"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Notification"', 'notifId'), COALESCE((SELECT MAX("notifId") FROM "Notification"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Queen"', 'queenId'), COALESCE((SELECT MAX("queenId") FROM "Queen"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"ActiveSeasons"', 'seasonId'), COALESCE((SELECT MAX("seasonId") FROM "ActiveSeasons"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Bracket"', 'bracketId'), COALESCE((SELECT MAX("bracketId") FROM "Bracket"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"FanSurvey"', 'id'), COALESCE((SELECT MAX(id) FROM "FanSurvey"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"FanSurveyData"', 'id'), COALESCE((SELECT MAX(id) FROM "FanSurveyData"), 1))`;
-        await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"SeasonFinaleResponse"', 'id'), COALESCE((SELECT MAX(id) FROM "SeasonFinaleResponse"), 1))`;
-
-        logger.info('Admin.Controller.ts: restoreDatabase() - restore complete');
+        await adminService.restoreDatabaseFromDump(tables);
         res.status(200).json({ message: 'Database restored successfully' });
-
     } catch (error) {
         logger.error('Admin.Controller.ts: restoreDatabase() - failed', { error });
         res.status(500).json({ Error: 'Failed to restore database' });
+    }
+};
+
+// Doc: Restores the database from a JSON dump previously uploaded to S3 by the DatabaseBackup
+// Doc: workflow, instead of requiring the dump to be POSTed directly. With no `date` in the body,
+// Doc: restores the single most recent backup; with `date` (e.g. "2026-08-31"), restores the latest
+// Doc: backup whose <date-time> folder name starts with it.
+// Doc: Body: { date?: string }
+// Doc: Route: POST /admin/restoreFromBackup  (protected by protectAdmin)
+export const restoreDatabaseFromBackup = async (req: Request<unknown, unknown, RestoreFromBackupBody>, res: Response) => {
+    const { date } = req.body ?? {};
+    logger.info('Admin.Controller.ts: restoreDatabaseFromBackup() - starting restore from S3 backup', { date: date ?? 'latest' });
+
+    try {
+        const result = await adminService.restoreDatabaseFromBackup(date);
+        if (!result) {
+            const message = date ? `No database backup found matching '${date}'` : 'No database backups found';
+            logger.error('Admin.Controller.ts: restoreDatabaseFromBackup() - no matching backup', { date });
+            return res.status(404).json({ Error: message });
+        }
+
+        logger.info('Admin.Controller.ts: restoreDatabaseFromBackup() - restore complete', result);
+        return res.status(200).json({
+            message: 'Database restored from backup successfully',
+            key: result.key,
+            backupTimestamp: result.backupTimestamp,
+        });
+    } catch (error) {
+        logger.error('Admin.Controller.ts: restoreDatabaseFromBackup() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to restore database from backup' });
+    }
+};
+
+// Doc: Lists the <date-time> folder names of every database backup in S3 (newest last), so the admin
+// Doc: panel can populate a "which backup?" dropdown for the Database Restore workflow.
+// Doc: Route: GET /admin/backups  (protected by protectAdmin)
+export const getBackupTimestamps = async (_req: Request, res: Response) => {
+    try {
+        const timestamps = await adminService.listBackupTimestamps();
+        return res.status(200).json(timestamps);
+    } catch (error) {
+        logger.error('Admin.Controller.ts: getBackupTimestamps() - failed', { error });
+        return res.status(500).json({ Error: 'Failed to list database backups' });
     }
 };
 

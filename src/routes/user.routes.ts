@@ -1,7 +1,7 @@
 // Doc: Route definitions for user management endpoints. Auth and create routes are public; other routes require JWT authentication.
 // Doc: Base path: /users (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/credentials/TokenManager";
+import { protect, protectAdmin } from "../util/credentials/TokenManager";
 import * as userController from "../controllers/user.controller";
 
 const router = Router();
@@ -23,5 +23,7 @@ router.get('/getAllEmails', protect, userController.getAllEmails);
 router.patch('/displayName', protect, userController.updateDisplayName);
 // Doc: POST /users/getDisplayNames - Retrieves display names for a list of emails (body: {emails: string[]}) - Protected route
 router.post('/getDisplayNames', protect, userController.getDisplayNames);
+// Doc: POST /users/setAdmin - Sets a user's isAdmin flag (body: {email: string, isAdmin: boolean}) - Admin Key protected route
+router.post('/setAdmin', protectAdmin, userController.setAdmin);
 
 export default router;

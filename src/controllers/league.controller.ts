@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as leagueService from "../services/league.service";
 import logger from "../util/logger/LoggerImpl";
+import { CreateLeagueInput } from "../types/Interfaces";
 
 // Doc: Retrieves a specific league record by league name, franchise, and season.
 // Doc: Args: req (Request) - Express request object with body containing {leagueName: string, franchise: string, season: number}, res (Response) - Express response object
@@ -61,9 +62,9 @@ export const getLeaguesByUser = async (req: Request, res: Response) => {
 };
 
 // Doc: Creates a new league with the specified settings and adds the owner to the users array.
-// Doc: Args: req (Request) - Express request object with body containing {leagueName: string, owner: string, users: string[], maxPlayers: number, maxQueensPerTeam: number, teamName: string, franchise: string, season: number, queens: any[]}, res (Response) - Express response object
+// Doc: Args: req (Request<unknown, unknown, CreateLeagueInput>) - Express request object with body containing {leagueName: string, owner: string, users: string[], maxPlayers: number, maxQueensPerTeam: number, teamName: string, franchise: string, season: number, queens: string[]}, res (Response) - Express response object
 // Doc: Route: Likely POST /leagues
-export const createLeague = async (req: Request, res: Response) => {
+export const createLeague = async (req: Request<unknown, unknown, CreateLeagueInput>, res: Response) => {
     const {leagueName, owner, users, maxPlayers, maxQueensPerTeam, teamName, franchise, season, queens} = req.body;
 
     if(!users.includes(owner)) {

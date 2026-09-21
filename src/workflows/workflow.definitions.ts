@@ -8,14 +8,22 @@ import { testWorkflow } from './testWorkflow';
 import { testS3 } from './testS3';
 import { lookFinder } from './lookFinder';
 import { sendEmail } from './sendEmail';
+import { sendNotification } from './sendNotification';
 import { databaseBackup } from './databaseBackup';
+import { databaseRestore } from './databaseRestore';
+import { instanceHealthCheck } from './instanceHealthCheck';
+import { fetchUpcomingSeasons } from './fetchUpcomingSeasons';
 
 export const WORKFLOWS: WorkflowDefinition[] = [
     testWorkflow,
     testS3,
     lookFinder,
     sendEmail,
+    sendNotification,
     databaseBackup,
+    databaseRestore,
+    instanceHealthCheck,
+    fetchUpcomingSeasons,
 ];
 
 // Doc: Looks up a workflow definition by id — returns undefined if it doesn't exist.

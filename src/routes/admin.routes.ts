@@ -7,6 +7,7 @@ const router = Router();
 // Database operations
 router.get('/dump',                protectAdmin, adminController.dumpDatabase);
 router.post('/dump',               protectAdmin, adminController.restoreDatabase);
+router.post('/restoreFromBackup',  protectAdmin, adminController.restoreDatabaseFromBackup);
 
 // Season finale
 router.post('/computeSeasonFinale', protectAdmin, adminController.computeSeasonFinale);
@@ -29,9 +30,14 @@ router.get('/getJwt',              protectAdmin, adminController.getAdminJwt);
 router.get('/activeSeasons',       protectAdmin, adminController.getAdminActiveSeasons);
 router.get('/queens',              protectAdmin, adminController.getAdminQueens);
 router.get('/brackets',            protectAdmin, adminController.getAdminBrackets);
+router.get('/backups',             protectAdmin, adminController.getBackupTimestamps);
 
 // Log viewer
 router.get('/logs',                protectAdmin, adminController.getLogs);
+
+// Database viewer
+router.get('/tables',              protectAdmin, adminController.getAdminTableNames);
+router.get('/tables/:table',       protectAdmin, adminController.getAdminTableRecords);
 
 // Workflows
 router.post('/workflows/execute',            protectAdmin, adminController.executeWorkflow);

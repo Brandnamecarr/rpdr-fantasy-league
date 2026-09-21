@@ -140,6 +140,18 @@ export const updateDisplayName = async (email: string, displayName: string) => {
     });
 };
 
+// Doc: Sets (or clears) a user's isAdmin flag.
+// Doc: Args: email (string) - The user's email address, isAdmin (boolean) - The new isAdmin value
+// Doc: Returns: Promise<User> - The updated user record
+export const setAdmin = async (email: string, isAdmin: boolean) => {
+    const normalizedEmail = email.toUpperCase();
+    logger.debug('User.Service.ts: setAdmin() - updating isAdmin', {email: normalizedEmail, isAdmin});
+    return prisma.user.update({
+        where: { email: normalizedEmail },
+        data: { isAdmin },
+    });
+};
+
 // Doc: Updates a user's password in the database with a new hashed password.
 // Doc: Args: email (string) - The user's email address, newHashedPassword (string) - The new hashed password
 // Doc: Returns: Promise<User> - The updated user record

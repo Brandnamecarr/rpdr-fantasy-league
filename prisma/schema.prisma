@@ -12,6 +12,7 @@ model User {
   email       String   @unique
   password    String
   displayName String?
+  isAdmin     Boolean  @default(false)
   createdAt   DateTime @default(now())
 }
 
@@ -172,4 +173,16 @@ model SeasonFinaleResponse {
   createdAt       DateTime @default(now())
 
   @@unique([franchise, season, submittedBy])
+}
+
+// Doc: One row per (ip, day) — upserted by GET /track/ping (called once by the React app on home page
+// Doc: load), so a count of rows for a given visitDate is already the unique-visitor count (dedup
+// Doc: happens at write time, not read time).
+model SiteVisit {
+  id        Int      @id @default(autoincrement())
+  ip        String
+  visitDate String   // UTC calendar date, "YYYY-MM-DD"
+  createdAt DateTime @default(now())
+
+  @@unique([ip, visitDate])
 }
