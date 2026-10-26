@@ -1,6 +1,6 @@
 // Doc: FetchUpcomingSeasons will pull upcoming-season info (at minimum franchise/season/premiereDate)
 // Doc: from an external source and store it via activeSeasons.service.ts's setUpcomingSeason(), which
-// Doc: upserts into the existing ActiveSeasons table (as INACTIVE) — the same table/route the Dashboard's
+// Doc: upserts into the existing ActiveSeasons table (as UPCOMING) — the same table/route the Dashboard's
 // Doc: UpcomingSeasonsPanel already reads via GET /activeSeason/getUpcomingSeasons, so once this step is
 // Doc: filled in, fetched premiere dates show up there with no frontend changes needed.
 // Doc: `id` is the contract with the frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) — keep it

@@ -117,12 +117,9 @@ export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
 export const addNewQueen = async (req: Request, res: Response) => {
     const {name, franchise, season, status, location} = req.body as INTERFACES.QueenInput;
     logger.debug('Queen.Controller.ts: addNewQueen() - request received', {name, franchise, season, status, location});
-    let loc: string = '';
-    if(!location) {
-        loc = "UNKNOWN";
-    }
+    const loc: string = location || "UNKNOWN";
     try {
-        const response = await queenService.addNewQueen(name, franchise, season, location, status);
+        const response = await queenService.addNewQueen(name, franchise, season, loc, status);
         if(!response) {
             logger.error('Queen.Controller.ts: addNewQueen() - service returned null', {name, franchise, season});
             return res.status(404).json({Error: "Unable to make queen matching params"});

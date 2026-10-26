@@ -42,4 +42,13 @@ router.post("/computeFanSurvey", leagueOpsController.computeFanSurvey);
 // Doc: POST /leagueOps/submitSeasonFinale - Store one season finale survey response per user per season
 router.post("/submitSeasonFinale", leagueOpsController.submitSeasonFinale);
 
+// Doc: POST /leagueOps/requestToJoinLeague - Creates a PENDING request to join a league and notifies the owner (body: {leagueName, franchise, season, teamName, queens})
+router.post("/requestToJoinLeague", leagueOpsController.requestToJoinLeague);
+// Doc: POST /leagueOps/approveJoinRequest - Approves a pending join request; owner-only (body: {requestId})
+router.post("/approveJoinRequest", leagueOpsController.approveJoinRequest);
+// Doc: POST /leagueOps/denyJoinRequest - Denies a pending join request; owner-only (body: {requestId})
+router.post("/denyJoinRequest", leagueOpsController.denyJoinRequest);
+// Doc: POST /leagueOps/getPendingJoinRequests - Returns all PENDING join requests for leagues owned by the authenticated user (body: {})
+router.post("/getPendingJoinRequests", leagueOpsController.getPendingJoinRequests);
+
 export default router;

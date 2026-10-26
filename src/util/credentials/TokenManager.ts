@@ -8,6 +8,16 @@ import { AuthRequest } from '../../types/CustomRequests';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
 
+// Doc: Admin email allowlist — ADMIN_EMAIL may hold one address or a comma-separated list.
+export const ADMIN_EMAILS = (process.env.ADMIN_EMAIL ?? '')
+    .split(',')
+    .map(email => email.trim().toUpperCase())
+    .filter(Boolean);
+
+// Doc: Checks whether an email is in the ADMIN_EMAIL allowlist (case-insensitive).
+export const isAdminEmail = (email?: string | null): boolean =>
+    !!email && ADMIN_EMAILS.includes(email.toUpperCase());
+
 
 // Doc: Secret key for JWT signing — must be set via JWT_SECRET env var.
 //      Throws at startup in production if missing so misconfigured deploys fail fast.

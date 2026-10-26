@@ -2,12 +2,13 @@ import { Request, Response } from "express";
 import * as leagueOpsService from '../services/leagueOps.service';
 import logger from "../util/logger/LoggerImpl";
 import * as leagueService from '../services/league.service';
+import { isOverFreeLeagueLimit } from '../services/subscription.service';
 import { getSeasonRecord, getSurveyWindow } from '../services/activeSeasons.service';
 import { AuthRequest } from '../types/CustomRequests';
 import {
     WeeklyUpdateBody, WeeklySurveyBody, AddUserToLeagueBody, RemoveUserFromLeagueBody,
     GetRostersByLeagueBody, OpenFanSurveyBody, SubmitFanSurveyBody, ComputeFanSurveyBody,
-    SubmitSeasonFinaleBody, IncreaseLeagueSizeBody, CaughtError,
+    SubmitSeasonFinaleBody, IncreaseLeagueSizeBody, RequestToJoinLeagueBody, JoinRequestIdBody, CaughtError,
 } from '../types/Interfaces';
 
 import {League, User, Roster} from '@prisma/client';
@@ -73,6 +74,13 @@ export const addUserToLeague = async (req: Request<unknown, unknown, AddUserToLe
         }
         let league: League = result;
         logger.debug('LeagueOps.Controller.ts: Found league: ', {leagueName: league.leagueName});
+
+        // Doc: Free-tier users may only be in (own or join) one league total. Paying members
+        // Doc: (hasActiveMembership) are exempt. See subscription.service.ts's isOverFreeLeagueLimit().
+        if (await isOverFreeLeagueLimit(username)) {
+            logger.error('LeagueOps.Controller.ts: addUserToLeague() - user is over the free-tier league limit', {username, leagueName});
+            return res.status(403).json({ Error: 'FREE_TIER_LEAGUE_LIMIT' });
+        }
 
         // Enforce bracket selection constraints when the season uses brackets
         const bracketError = await leagueOpsService.validateBracketSelection(league.franchise, league.season, queens);
@@ -384,6 +392,128 @@ export const getTalliedFanSurveyResults = async (req: Request, res: Response) =>
     } catch (error) {
         logger.error('LeagueOps.Controller.ts: getTalliedFanSurveyResults() - error', { error });
         return res.status(500).json({ Error: 'Error fetching fan survey results' });
+    }
+};
+
+// Doc: Requests to join an existing league — no longer grants membership immediately. Creates a
+// Doc: PENDING LeagueJoinRequest and notifies the league owner, who must approve/deny it.
+// Doc: Args: req (AuthRequest<RequestToJoinLeagueBody>) - body {leagueName, franchise, season, teamName, queens}, requestingEmail from the JWT
+// Doc: Route: POST /leagueOps/requestToJoinLeague
+export const requestToJoinLeague = async (req: AuthRequest<RequestToJoinLeagueBody>, res: Response) => {
+    const { leagueName, franchise, season, teamName, queens } = req.body;
+    const requestingEmail = req.user!.email;
+    logger.info('LeagueOps.Controller.ts: requestToJoinLeague() - request received', { leagueName, franchise, season, requestingEmail });
+
+    try {
+        const league = await leagueService.getLeague(leagueName, franchise, Number(season));
+        if (!league) {
+            logger.error('LeagueOps.Controller.ts: requestToJoinLeague() - league not found', { leagueName, franchise, season });
+            return res.status(404).json({ Error: 'League not found in database' });
+        }
+
+        const bracketError = await leagueOpsService.validateBracketSelection(league.franchise, league.season, queens);
+        if (bracketError) {
+            logger.error('LeagueOps.Controller.ts: requestToJoinLeague() - bracket validation failed', { bracketError });
+            return res.status(400).json({ Error: bracketError });
+        }
+
+        const result = await leagueOpsService.createJoinRequest(requestingEmail, teamName, queens, league, league.franchise, league.season);
+        logger.info('LeagueOps.Controller.ts: requestToJoinLeague() - request created successfully', { requestId: result.id });
+        return res.status(201).json(result);
+    } catch (error) {
+        const err = error as CaughtError;
+        if (err?.message === 'ALREADY_MEMBER') {
+            return res.status(409).json({ Error: 'You are already a member of this league' });
+        }
+        if (err?.message === 'LEAGUE_FULL') {
+            return res.status(409).json({ Error: 'This league is full' });
+        }
+        if (err?.message === 'FREE_TIER_LEAGUE_LIMIT') {
+            return res.status(403).json({ Error: 'FREE_TIER_LEAGUE_LIMIT' });
+        }
+        if (err?.message === 'PENDING_REQUEST_EXISTS') {
+            return res.status(409).json({ Error: 'You already have a pending request to join this league' });
+        }
+        logger.error('LeagueOps.Controller.ts: requestToJoinLeague() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error requesting to join league' });
+    }
+};
+
+// Doc: Approves a pending join request. Only the league owner may call this.
+// Doc: Args: req (AuthRequest<JoinRequestIdBody>) - body {requestId}, requestingEmail from the JWT
+// Doc: Route: POST /leagueOps/approveJoinRequest
+export const approveJoinRequest = async (req: AuthRequest<JoinRequestIdBody>, res: Response) => {
+    const { requestId } = req.body;
+    const requestingEmail = req.user!.email;
+    logger.info('LeagueOps.Controller.ts: approveJoinRequest() - request received', { requestId, requestingEmail });
+
+    try {
+        const result = await leagueOpsService.approveJoinRequest(Number(requestId), requestingEmail);
+        logger.info('LeagueOps.Controller.ts: approveJoinRequest() - approved successfully', { requestId });
+        return res.status(200).json(result);
+    } catch (error) {
+        const err = error as CaughtError;
+        if (err?.message === 'REQUEST_NOT_FOUND' || err?.message === 'LEAGUE_NOT_FOUND') {
+            return res.status(404).json({ Error: 'Join request not found' });
+        }
+        if (err?.message === 'NOT_OWNER') {
+            return res.status(403).json({ Error: 'Only the league owner can approve join requests' });
+        }
+        if (err?.message === 'REQUEST_NOT_PENDING') {
+            return res.status(409).json({ Error: 'This request has already been resolved' });
+        }
+        if (err?.message === 'FREE_TIER_LEAGUE_LIMIT') {
+            return res.status(403).json({ Error: 'FREE_TIER_LEAGUE_LIMIT' });
+        }
+        if (err?.message === 'LEAGUE_FULL') {
+            return res.status(409).json({ Error: 'This league is full' });
+        }
+        logger.error('LeagueOps.Controller.ts: approveJoinRequest() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error approving join request' });
+    }
+};
+
+// Doc: Denies a pending join request. Only the league owner may call this. No membership side effects.
+// Doc: Args: req (AuthRequest<JoinRequestIdBody>) - body {requestId}, requestingEmail from the JWT
+// Doc: Route: POST /leagueOps/denyJoinRequest
+export const denyJoinRequest = async (req: AuthRequest<JoinRequestIdBody>, res: Response) => {
+    const { requestId } = req.body;
+    const requestingEmail = req.user!.email;
+    logger.info('LeagueOps.Controller.ts: denyJoinRequest() - request received', { requestId, requestingEmail });
+
+    try {
+        const result = await leagueOpsService.denyJoinRequest(Number(requestId), requestingEmail);
+        logger.info('LeagueOps.Controller.ts: denyJoinRequest() - denied successfully', { requestId });
+        return res.status(200).json(result);
+    } catch (error) {
+        const err = error as CaughtError;
+        if (err?.message === 'REQUEST_NOT_FOUND' || err?.message === 'LEAGUE_NOT_FOUND') {
+            return res.status(404).json({ Error: 'Join request not found' });
+        }
+        if (err?.message === 'NOT_OWNER') {
+            return res.status(403).json({ Error: 'Only the league owner can deny join requests' });
+        }
+        if (err?.message === 'REQUEST_NOT_PENDING') {
+            return res.status(409).json({ Error: 'This request has already been resolved' });
+        }
+        logger.error('LeagueOps.Controller.ts: denyJoinRequest() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error denying join request' });
+    }
+};
+
+// Doc: Returns all PENDING join requests for leagues owned by the authenticated user.
+// Doc: Args: req (AuthRequest) - body {} (owner inferred from JWT)
+// Doc: Route: POST /leagueOps/getPendingJoinRequests
+export const getPendingJoinRequests = async (req: AuthRequest, res: Response) => {
+    const email = req.user!.email;
+    logger.info('LeagueOps.Controller.ts: getPendingJoinRequests() - request received', { email });
+
+    try {
+        const requests = await leagueOpsService.getPendingJoinRequestsForOwner(email);
+        return res.status(200).json(requests);
+    } catch (error) {
+        logger.error('LeagueOps.Controller.ts: getPendingJoinRequests() - unexpected error', { error });
+        return res.status(500).json({ Error: 'Error fetching pending join requests' });
     }
 };
 

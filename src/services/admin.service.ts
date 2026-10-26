@@ -13,6 +13,8 @@ export const TABLE_REGISTRY: Record<string, { fetchAll: () => Promise<Record<str
     users:                 { fetchAll: () => prisma.user.findMany({ select: { id: true, email: true, displayName: true, createdAt: true } }) },
     leagues:               { fetchAll: () => prisma.league.findMany() },
     rosters:                { fetchAll: () => prisma.roster.findMany() },
+    leagueHistory:          { fetchAll: () => prisma.leagueHistory.findMany() },
+    rosterHistory:          { fetchAll: () => prisma.rosterHistory.findMany() },
     notifications:          { fetchAll: () => prisma.notification.findMany() },
     queens:                 { fetchAll: () => prisma.queen.findMany() },
     activeSeasons:          { fetchAll: () => prisma.activeSeasons.findMany() },
@@ -41,11 +43,13 @@ export const fetchTableRecords = async (table: string): Promise<Record<string, u
 export const buildDatabaseDump = async () => {
     logger.debug('Admin.Service.ts: buildDatabaseDump() - querying all tables');
 
-    const [rawUsers, leagues, rosters, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses, episodeResults] =
+    const [rawUsers, leagues, rosters, leagueHistory, rosterHistory, notifications, queens, activeSeasons, brackets, fanSurveys, fanSurveyData, seasonFinaleResponses, episodeResults] =
         await Promise.all([
             prisma.user.findMany(),
             prisma.league.findMany(),
             prisma.roster.findMany(),
+            prisma.leagueHistory.findMany(),
+            prisma.rosterHistory.findMany(),
             prisma.notification.findMany(),
             prisma.queen.findMany(),
             prisma.activeSeasons.findMany(),
@@ -65,6 +69,8 @@ export const buildDatabaseDump = async () => {
             users:                  { count: users.length,                  records: users },
             leagues:                { count: leagues.length,                records: leagues },
             rosters:                { count: rosters.length,                records: rosters },
+            leagueHistory:          { count: leagueHistory.length,          records: leagueHistory },
+            rosterHistory:          { count: rosterHistory.length,          records: rosterHistory },
             notifications:          { count: notifications.length,          records: notifications },
             queens:                 { count: queens.length,                 records: queens },
             activeSeasons:          { count: activeSeasons.length,          records: activeSeasons },
@@ -86,6 +92,8 @@ export const restoreDatabaseFromDump = async (tables: RestoreDatabaseBody['table
         users                 = { records: [] },
         leagues               = { records: [] },
         rosters               = { records: [] },
+        leagueHistory         = { records: [] },
+        rosterHistory         = { records: [] },
         notifications         = { records: [] },
         queens                = { records: [] },
         activeSeasons         = { records: [] },
@@ -111,6 +119,8 @@ export const restoreDatabaseFromDump = async (tables: RestoreDatabaseBody['table
         prisma.notification.deleteMany(),
         prisma.roster.deleteMany(),
         prisma.league.deleteMany(),
+        prisma.rosterHistory.deleteMany(),
+        prisma.leagueHistory.deleteMany(),
         prisma.user.deleteMany(),
     ]);
 
@@ -127,6 +137,12 @@ export const restoreDatabaseFromDump = async (tables: RestoreDatabaseBody['table
     }
     if (rosters.records.length > 0) {
         await prisma.roster.createMany({ data: rosters.records });
+    }
+    if (leagueHistory.records.length > 0) {
+        await prisma.leagueHistory.createMany({ data: leagueHistory.records });
+    }
+    if (rosterHistory.records.length > 0) {
+        await prisma.rosterHistory.createMany({ data: rosterHistory.records });
     }
     if (notifications.records.length > 0) {
         await prisma.notification.createMany({ data: notifications.records });
@@ -158,6 +174,8 @@ export const restoreDatabaseFromDump = async (tables: RestoreDatabaseBody['table
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"User"', 'id'), COALESCE((SELECT MAX(id) FROM "User"), 1))`;
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"League"', 'id'), COALESCE((SELECT MAX(id) FROM "League"), 1))`;
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Roster"', 'recordId'), COALESCE((SELECT MAX("recordId") FROM "Roster"), 1))`;
+    await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"LeagueHistory"', 'id'), COALESCE((SELECT MAX(id) FROM "LeagueHistory"), 1))`;
+    await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"RosterHistory"', 'recordId'), COALESCE((SELECT MAX("recordId") FROM "RosterHistory"), 1))`;
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Notification"', 'notifId'), COALESCE((SELECT MAX("notifId") FROM "Notification"), 1))`;
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"Queen"', 'queenId'), COALESCE((SELECT MAX("queenId") FROM "Queen"), 1))`;
     await prisma.$executeRaw`SELECT setval(pg_get_serial_sequence('"ActiveSeasons"', 'seasonId'), COALESCE((SELECT MAX("seasonId") FROM "ActiveSeasons"), 1))`;

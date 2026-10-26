@@ -48,7 +48,8 @@ export enum FanSurveyPoints {
 // Doc: Log severity levels used by the logger utility (see util/logger/LoggerImpl.ts)
 export enum LogLevel {
     ERROR=0,
-    INFO=1,
-    DEBUG=2
+    WARN=1,
+    INFO=2,
+    DEBUG=3
 }
 

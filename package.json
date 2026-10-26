@@ -7,11 +7,7 @@
     "build": "npx tsc",
     "start": "node dist/server.js",
     "dev": "npx ts-node src/server.ts",
-    "test": "jest",
-    "seed": "ts-node prisma/seed.ts"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",

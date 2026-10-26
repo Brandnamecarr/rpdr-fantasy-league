@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as leagueService from "../services/league.service";
 import logger from "../util/logger/LoggerImpl";
+import { isOverFreeLeagueLimit } from "../services/subscription.service";
 import { CreateLeagueInput } from "../types/Interfaces";
 
 // Doc: Retrieves a specific league record by league name, franchise, and season.
@@ -73,6 +74,13 @@ export const createLeague = async (req: Request<unknown, unknown, CreateLeagueIn
 
     logger.debug('League.Controller.ts: payload in createLeague(): ', {leaguename: leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season});
     try {
+        // Doc: League ownership counts toward the same 1-league free-tier cap as membership.
+        // Doc: Paying members (hasActiveMembership) are exempt. See subscription.service.ts's isOverFreeLeagueLimit().
+        if (await isOverFreeLeagueLimit(owner)) {
+            logger.error('League.Controller.ts: createLeague() - owner is over the free-tier league limit', {owner, leagueName});
+            return res.status(403).json({ Error: 'FREE_TIER_LEAGUE_LIMIT' });
+        }
+
         const league = await leagueService.createLeague(leagueName, owner, users, maxPlayers, maxQueensPerTeam, franchise, season, teamName, queens);
         logger.debug('League.Controller.ts: creating league with status 201');
         logger.debug('Created league: ', {league: league});

@@ -1,6 +1,6 @@
 // Doc: Main Express application configuration file.
 // Doc: Sets up middleware (CORS, JSON parsing) and defines all API route endpoints.
-// Doc: Routes configured: /users, /league, /leagueOps, /notifications, /queens, /activeSeason
+// Doc: Routes configured: /users, /league, /leagueOps, /notifications, /queens, /activeSeason, /admin, /subscription
 
 // express imports //
 import express, { Request, Response } from 'express';
@@ -14,6 +14,7 @@ import notifRoutes from './routes/notification.routes';
 import queenRoutes from './routes/queen.routes';
 import activeSeasonRoutes from './routes/activeSeasons.routes';
 import adminRoutes from './routes/admin.routes';
+import subscriptionRoutes from './routes/subscription.routes';
 import { recordVisit } from './services/siteVisit.service';
 
 // Doc: Express app instance with middleware configuration
@@ -32,6 +33,12 @@ app.use(cors({
     methods:['GET', 'POST', 'PATCH'],
     credentials: false
 }));
+
+// Doc: Stripe webhook route needs the raw request body (not JSON-parsed) so a future
+//      stripe.webhooks.constructEvent(rawBody, signature, secret) call can verify the signature.
+//      Must be mounted with a path-scoped raw parser BEFORE the global express.json() below —
+//      once express.json() consumes the body, it's gone for any handler mounted after it.
+app.use('/subscription/webhook', express.raw({ type: 'application/json' }));
 
 // Doc: JSON body parser middleware
 app.use(express.json());
@@ -57,5 +64,6 @@ app.use('/notifications', notifRoutes);
 app.use('/queens', queenRoutes);
 app.use('/activeSeason', activeSeasonRoutes);
 app.use('/admin', adminRoutes);
+app.use('/subscription', subscriptionRoutes);
 
 export default app;

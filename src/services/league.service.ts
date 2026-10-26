@@ -148,22 +148,78 @@ export const getAvailableLeagues = async () => {
     return availableLeagues;
 };
 
-// Doc: Queries all leagues a user is in, then cross-references with INACTIVE ActiveSeasons to return only past leagues.
+// Doc: Queries LeagueHistory for every archived league the user was a part of. A league only ever
+// Doc: lands in LeagueHistory once its season has been archived (see archiveLeagueSeason() below),
+// Doc: so this is "the user's past leagues" by construction — no live-table cross-referencing needed.
 // Doc: Args: email (string) - The user's email address
-// Doc: Returns: Promise<League[]> - Array of the user's leagues whose franchise/season is marked INACTIVE
+// Doc: Returns: Promise<LeagueHistory[]> - Array of the user's archived leagues
 export const getInactiveLeaguesByUser = async (email: string) => {
-    logger.debug('League.Service.ts: getInactiveLeaguesByUser() - fetching inactive leagues for user', {email});
+    logger.debug('League.Service.ts: getInactiveLeaguesByUser() - fetching archived leagues for user', {email});
 
-    const userLeagues = await prisma.league.findMany({
+    return prisma.leagueHistory.findMany({
         where: { users: { has: email } },
     });
+};
 
-    const inactiveSeasons = await prisma.activeSeasons.findMany({
-        where: { activityStatus: 'INACTIVE' },
-    });
+// Doc: Moves every League/Roster row for a franchise+season into LeagueHistory/RosterHistory, then
+// Doc: deletes them from the live tables. Rosters are queried by franchise+season directly (not per
+// Doc: league by leagueName) since Roster already carries its own franchise/season and a franchise+
+// Doc: season can have many leagues. Idempotent: if nothing is live for that franchise+season (already
+// Doc: archived, or there was never anything there), it's a no-op — safe to call more than once, which
+// Doc: matters because its caller (activeSeasons.service.ts's updateSeason()) can itself be called
+// Doc: more than once with the same status. Also discards that franchise/season's fan surveys
+// Doc: (FanSurvey + FanSurveyData) — unlike leagues/rosters they aren't preserved anywhere, since once
+// Doc: a season is over there's no "previous surveys" view that needs them. FanSurveyData is deleted
+// Doc: before FanSurvey since it's the one real FK relation in this schema.
+// Doc: Args: franchise (string), season (number)
+// Doc: Returns: Promise<{ archivedLeagues: number; archivedRosters: number }>
+export const archiveLeagueSeason = async (franchise: string, season: number) => {
+    logger.debug('League.Service.ts: archiveLeagueSeason() - archiving leagues and rosters', {franchise, season});
 
-    const inactiveSet = new Set(inactiveSeasons.map(s => `${s.franchise}:${s.season}`));
-    return userLeagues.filter(l => inactiveSet.has(`${l.franchise}:${l.season}`));
+    const [leagues, rosters] = await Promise.all([
+        prisma.league.findMany({ where: { franchise, season } }),
+        prisma.roster.findMany({ where: { franchise, season } }),
+    ]);
+
+    if (leagues.length === 0 && rosters.length === 0) {
+        logger.debug('League.Service.ts: archiveLeagueSeason() - nothing to archive', {franchise, season});
+        return { archivedLeagues: 0, archivedRosters: 0 };
+    }
+
+    const leagueHistoryRows = leagues.map(l => ({
+        originalLeagueId: l.id,
+        leagueName: l.leagueName,
+        franchise: l.franchise,
+        season: l.season,
+        owner: l.owner,
+        users: l.users,
+        maxPlayers: l.maxPlayers,
+        maxQueensPerTeam: l.maxQueensPerTeam,
+        createdAt: l.createdAt,
+    }));
+    const rosterHistoryRows = rosters.map(r => ({
+        originalRecordId: r.recordId,
+        leagueName: r.leagueName,
+        username: r.username,
+        teamName: r.teamName,
+        franchise: r.franchise,
+        season: r.season,
+        queens: r.queens,
+        currentPoints: r.currentPoints,
+        pointUpdates: r.pointUpdates,
+    }));
+
+    const [{ count: archivedLeagues }, { count: archivedRosters }] = await prisma.$transaction([
+        prisma.leagueHistory.createMany({ data: leagueHistoryRows }),
+        prisma.rosterHistory.createMany({ data: rosterHistoryRows }),
+        prisma.league.deleteMany({ where: { franchise, season } }),
+        prisma.roster.deleteMany({ where: { franchise, season } }),
+        prisma.fanSurveyData.deleteMany({ where: { franchise, season } }),
+        prisma.fanSurvey.deleteMany({ where: { franchise, season } }),
+    ]);
+
+    logger.info('League.Service.ts: archiveLeagueSeason() - archived and cleared live tables', {franchise, season, archivedLeagues, archivedRosters});
+    return { archivedLeagues, archivedRosters };
 };
 
 // Doc: Queries every league in a franchise/season, regardless of available spots.

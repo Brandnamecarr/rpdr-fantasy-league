@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
 import * as seasonService from "../services/activeSeasons.service";
+import { getUserByName } from "../services/user.service";
 import logger from "../util/logger/LoggerImpl";
 import { CaughtError } from "../types/Interfaces";
+import { AuthRequest } from "../types/CustomRequests";
+import { ActivityStatus } from "@prisma/client";
 
 // Doc: Retrieves all seasons with active status from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object
@@ -161,11 +164,16 @@ export const getBrackets = async (req: Request, res: Response) => {
     }
 };
 
-// Doc: Updates the status of an existing season in the database.
-// Doc: Args: req (Request) - Express request object with body containing {franchise: string, season: number, status: string}, res (Response) - Express response object
+// Doc: Updates the status of an existing season in the database. Setting status to INACTIVE now also
+// Doc: archives and deletes every League/Roster row for that franchise/season (see
+// Doc: activeSeasons.service.ts's updateSeason()) — an irreversible action, so this specific transition
+// Doc: is restricted to admin users (checked here via the requester's isAdmin flag, since the JWT
+// Doc: payload itself doesn't carry it) even though the route only requires a valid JWT (`protect`),
+// Doc: not the admin key. Non-INACTIVE status changes are unaffected.
+// Doc: Args: req (AuthRequest) - Express request object with body containing {franchise: string, season: number, status: string}, res (Response) - Express response object
 // Doc: Route: Likely PUT /seasons or PATCH /seasons
-export const updateSeason = async (req: Request, res: Response) => {
-    const {franchise, season, status, startDate, endDate} = req.body;
+export const updateSeason = async (req: AuthRequest, res: Response) => {
+    const {franchise, season, status, startDate, endDate} = req.body as { franchise?: string; season?: number; status?: string; startDate?: string; endDate?: string };
     logger.info('ActiveSeasons.Controller: updateSeason() - Request received to update season status', {franchise, season, newStatus: status});
 
     let seasonAsInt = Number(season) || 0;
@@ -175,10 +183,18 @@ export const updateSeason = async (req: Request, res: Response) => {
         return res.status(400).json({Error: 'Invalid parameters in function call'});
     }
 
+    if (status === 'INACTIVE') {
+        const requester = req.user?.email ? await getUserByName(req.user.email) : null;
+        if (!requester?.isAdmin) {
+            logger.error('ActiveSeasons.Controller: updateSeason() - non-admin attempted to close a season', {franchise, season, requester: req.user?.email});
+            return res.status(403).json({Error: 'Only an admin can mark a season INACTIVE'});
+        }
+    }
+
     try {
         logger.debug('ActiveSeasons.Controller: updateSeason() - Calling service to update season status', {franchise, season: seasonAsInt, status});
         let response = await seasonService.updateSeason(
-            franchise, season, status,
+            franchise, seasonAsInt, status as ActivityStatus,
             parseDateField(startDate),
             parseDateField(endDate),
         );

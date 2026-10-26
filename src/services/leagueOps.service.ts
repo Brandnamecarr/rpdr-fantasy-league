@@ -3,10 +3,12 @@ import logger from "../util/logger/LoggerImpl";
 
 import { getLeague } from "./league.service";
 import { getByFranchiseAndSeason as getQueensByFranchiseAndSeason } from "./queen.service";
-import {League, Roster, User, BracketName} from '@prisma/client';
+import { isOverFreeLeagueLimit } from "./subscription.service";
+import * as notificationService from "./notification.service";
+import {League, Roster, User, BracketName, Prisma} from '@prisma/client';
 import { TalliedEpisodeSurvey } from '../types/Interfaces';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
-import { QueenStatus } from "@prisma/client";
+import { QueenStatus, JoinRequestStatus, NotificationType } from "@prisma/client";
 
 // Doc: Helper function that calculates point changes for queens based on weekly episode results.
 // Doc: Args: maxiWinner (string[]) - Maxi challenge winners, isSnatchGame (boolean) - Whether episode is Snatch Game, miniWinner (string[]) - Mini challenge winners, topQueens (string[]) - Top placement queens, safeQueens (string[]) - Safe queens, bottomQueens (string[]) - Bottom placement queens, lipSyncWinner (string[]) - Lip sync winners, eliminated (string[]) - Eliminated queens
@@ -250,9 +252,14 @@ export const validateBracketSelection = async (franchise: string, season: number
 };
 
 // Doc: Adds a user to a league and creates their roster if there's space and they're not already a member.
-// Doc: Args: email (string) - User email, teamName (string) - Team name, league (League) - League object to join, queens (Array<string>) - Selected queens, franchise (string) - Franchise name, season (number) - Season number
+// Doc: Args: email (string) - User email, teamName (string) - Team name, league (League) - League object to join, queens (Array<string>) - Selected queens, franchise (string) - Franchise name, season (number) - Season number,
+// Doc: client (Prisma.TransactionClient | typeof prisma) - optional Prisma client to run these writes against; defaults to the
+// Doc: global prisma client, but callers that need this to participate in a larger transaction (e.g. approveJoinRequest below) can pass their `tx`.
 // Doc: Returns: Promise<Roster | null> - The created roster record or null if user already in league or league is full
-export const addUserToLeague = async (email: string, teamName: string, league: League, queens: Array<string>, franchise: string, season: number) => {
+export const addUserToLeague = async (
+    email: string, teamName: string, league: League, queens: Array<string>, franchise: string, season: number,
+    client: Prisma.TransactionClient | typeof prisma = prisma
+) => {
     logger.debug('leagueOps.service.ts: addUserToLeague: ', {email: email, name: league.id});
 
     // 1. Check to see if user is already registered for this league.
@@ -269,15 +276,15 @@ export const addUserToLeague = async (email: string, teamName: string, league: L
             };
             // 3. Update the record for the League table
             logger.debug('leagueOps.Service.ts: adding user to the league', {});
-            await prisma.league.update({
+            await client.league.update({
                 where: {
                     leagueName: league.leagueName,
                 },
                 data: updatedPayload,
             });
-            
+
             // 4. Make a new record in the Roster Table
-            return await prisma.roster.create({
+            return await client.roster.create({
                 data: {
                     leagueName: league.leagueName,
                     franchise: franchise,
@@ -332,6 +339,216 @@ export const removeUserFromLeague = async (email: string, league: League) => {
     }
 };
 
+// Doc: Creates a pending request for a user to join a league, instead of granting membership
+// Doc: immediately (that instant-join behavior lives in addUserToLeague above and is still used
+// Doc: once a request is approved). Validates the same preconditions addUserToLeague enforces
+// Doc: (not already a member, league not full, free-tier limit) plus a new check: no existing
+// Doc: PENDING request for this (leagueName, requester) pair — a prior DENIED request does not block
+// Doc: re-requesting. On success, notifies the league owner with a JOIN_REQUEST_RECEIVED notification
+// Doc: carrying the new request's id so the frontend can render Approve/Deny actions.
+// Doc: Args: email (string) - requester's email, teamName (string), queens (string[]) - selections captured at request time so they're ready to use on approval,
+// Doc: league (League) - the league being requested, franchise (string), season (number)
+// Doc: Throws: 'ALREADY_MEMBER' | 'LEAGUE_FULL' | 'FREE_TIER_LEAGUE_LIMIT' | 'PENDING_REQUEST_EXISTS'
+// Doc: Returns: Promise<LeagueJoinRequest> - the created PENDING request
+export const createJoinRequest = async (email: string, teamName: string, queens: Array<string>, league: League, franchise: string, season: number) => {
+    logger.info('LeagueOps.Service.ts: createJoinRequest() - request received', {email, leagueName: league.leagueName});
+
+    if (league.users.includes(email)) {
+        logger.error('LeagueOps.Service.ts: createJoinRequest() - user already in league', {email, leagueName: league.leagueName});
+        throw new Error('ALREADY_MEMBER');
+    }
+
+    if ((league.users.length + 1) > league.maxPlayers) {
+        logger.error('LeagueOps.Service.ts: createJoinRequest() - league is full', {leagueName: league.leagueName});
+        throw new Error('LEAGUE_FULL');
+    }
+
+    if (await isOverFreeLeagueLimit(email)) {
+        logger.error('LeagueOps.Service.ts: createJoinRequest() - user is over the free-tier league limit', {email});
+        throw new Error('FREE_TIER_LEAGUE_LIMIT');
+    }
+
+    const existingPending = await prisma.leagueJoinRequest.findFirst({
+        where: { leagueName: league.leagueName, requester: email, status: JoinRequestStatus.PENDING },
+    });
+    if (existingPending) {
+        logger.error('LeagueOps.Service.ts: createJoinRequest() - a pending request already exists', {email, leagueName: league.leagueName});
+        throw new Error('PENDING_REQUEST_EXISTS');
+    }
+
+    const request = await prisma.leagueJoinRequest.create({
+        data: {
+            leagueName: league.leagueName,
+            franchise: franchise,
+            season: season,
+            requester: email,
+            teamName: teamName,
+            queens: queens,
+            status: JoinRequestStatus.PENDING,
+        },
+    });
+
+    await notificationService.makeNewNotification(
+        'SERVER', league.owner, `${email} has requested to join your league "${league.leagueName}"`,
+        NotificationType.JOIN_REQUEST_RECEIVED, request.id,
+    );
+
+    logger.info('LeagueOps.Service.ts: createJoinRequest() - request created and owner notified', {requestId: request.id, leagueName: league.leagueName});
+    return request;
+};
+
+// Doc: Approves a pending LeagueJoinRequest: re-validates capacity/free-tier limits (time has passed
+// Doc: since the request was made), then reuses addUserToLeague's mutation (push email onto League.users,
+// Doc: create the Roster with the request's teamName/queens) before marking the request APPROVED and
+// Doc: notifying the requester. If capacity was exceeded in the meantime, throws without mutating anything.
+// Doc: The status claim (`leagueJoinRequest.updateMany` guarded on status === PENDING) plus
+// Doc: addUserToLeague's writes all run inside a single `prisma.$transaction` interactive transaction,
+// Doc: so two concurrent approve calls for the same request can't both pass the PENDING check and
+// Doc: both add the user / create duplicate rosters (TOCTOU fix). The notification is sent after the
+// Doc: transaction commits so a notification failure never rolls back a successful approval.
+// Doc: Args: requestId (number), requestingEmail (string) - must be the league's owner
+// Doc: Throws: 'REQUEST_NOT_FOUND' | 'LEAGUE_NOT_FOUND' | 'NOT_OWNER' | 'REQUEST_NOT_PENDING' | 'FREE_TIER_LEAGUE_LIMIT' | 'LEAGUE_FULL'
+// Doc: Returns: Promise<{request: LeagueJoinRequest, roster: Roster}>
+export const approveJoinRequest = async (requestId: number, requestingEmail: string) => {
+    logger.info('LeagueOps.Service.ts: approveJoinRequest() - request received', {requestId, requestingEmail});
+
+    const request = await prisma.leagueJoinRequest.findUnique({ where: { id: requestId } });
+    if (!request) {
+        logger.error('LeagueOps.Service.ts: approveJoinRequest() - request not found', {requestId});
+        throw new Error('REQUEST_NOT_FOUND');
+    }
+
+    const league = await getLeague(request.leagueName, request.franchise, request.season);
+    if (!league) {
+        logger.error('LeagueOps.Service.ts: approveJoinRequest() - league not found', {requestId, leagueName: request.leagueName});
+        throw new Error('LEAGUE_NOT_FOUND');
+    }
+
+    if (league.owner !== requestingEmail) {
+        logger.error('LeagueOps.Service.ts: approveJoinRequest() - requester is not the owner', {requestingEmail, owner: league.owner});
+        throw new Error('NOT_OWNER');
+    }
+
+    if (request.status !== JoinRequestStatus.PENDING) {
+        logger.error('LeagueOps.Service.ts: approveJoinRequest() - request is not pending', {requestId, status: request.status});
+        throw new Error('REQUEST_NOT_PENDING');
+    }
+
+    // Doc: Soft pre-check — isOverFreeLeagueLimit doesn't accept a transaction client, and this is a
+    // Doc: best-effort validation (not the source of truth against concurrent approvals; the atomic
+    // Doc: status claim inside the transaction below is).
+    if (await isOverFreeLeagueLimit(request.requester)) {
+        logger.error('LeagueOps.Service.ts: approveJoinRequest() - requester is over the free-tier league limit', {requester: request.requester});
+        throw new Error('FREE_TIER_LEAGUE_LIMIT');
+    }
+
+    const { updatedRequest, roster } = await prisma.$transaction(async (tx) => {
+        // Doc: Atomically claim the request — only succeeds if it's still PENDING, closing the race
+        // Doc: window between the earlier findUnique check and this write.
+        const claim = await tx.leagueJoinRequest.updateMany({
+            where: { id: requestId, status: JoinRequestStatus.PENDING },
+            data: { status: JoinRequestStatus.APPROVED },
+        });
+        if (claim.count === 0) {
+            logger.error('LeagueOps.Service.ts: approveJoinRequest() - lost the race, request no longer pending', {requestId});
+            throw new Error('REQUEST_NOT_PENDING');
+        }
+
+        const roster = await addUserToLeague(request.requester, request.teamName, league, request.queens, request.franchise, request.season, tx);
+        if (!roster) {
+            logger.error('LeagueOps.Service.ts: approveJoinRequest() - unable to add requester to league (full or already a member)', {requestId, leagueName: league.leagueName});
+            throw new Error('LEAGUE_FULL');
+        }
+
+        const updatedRequest = await tx.leagueJoinRequest.findUniqueOrThrow({ where: { id: requestId } });
+        return { updatedRequest, roster };
+    });
+
+    await notificationService.makeNewNotification(
+        'SERVER', request.requester, `Your request to join "${league.leagueName}" has been approved!`,
+        NotificationType.JOIN_REQUEST_APPROVED, request.id,
+    );
+
+    logger.info('LeagueOps.Service.ts: approveJoinRequest() - approved and requester notified', {requestId, leagueName: league.leagueName});
+    return { request: updatedRequest, roster };
+};
+
+// Doc: Denies a pending LeagueJoinRequest. No membership side effects — just marks the request DENIED
+// Doc: and notifies the requester. The requester may submit a new request later (only PENDING requests
+// Doc: block duplicates, see createJoinRequest above). The status claim runs inside a `prisma.$transaction`
+// Doc: (`leagueJoinRequest.updateMany` guarded on status === PENDING) so a concurrent approve/deny call
+// Doc: for the same request can't also succeed (TOCTOU fix, mirrors approveJoinRequest above).
+// Doc: Args: requestId (number), requestingEmail (string) - must be the league's owner
+// Doc: Throws: 'REQUEST_NOT_FOUND' | 'LEAGUE_NOT_FOUND' | 'NOT_OWNER' | 'REQUEST_NOT_PENDING'
+// Doc: Returns: Promise<LeagueJoinRequest> - the updated (DENIED) request
+export const denyJoinRequest = async (requestId: number, requestingEmail: string) => {
+    logger.info('LeagueOps.Service.ts: denyJoinRequest() - request received', {requestId, requestingEmail});
+
+    const request = await prisma.leagueJoinRequest.findUnique({ where: { id: requestId } });
+    if (!request) {
+        logger.error('LeagueOps.Service.ts: denyJoinRequest() - request not found', {requestId});
+        throw new Error('REQUEST_NOT_FOUND');
+    }
+
+    const league = await getLeague(request.leagueName, request.franchise, request.season);
+    if (!league) {
+        logger.error('LeagueOps.Service.ts: denyJoinRequest() - league not found', {requestId, leagueName: request.leagueName});
+        throw new Error('LEAGUE_NOT_FOUND');
+    }
+
+    if (league.owner !== requestingEmail) {
+        logger.error('LeagueOps.Service.ts: denyJoinRequest() - requester is not the owner', {requestingEmail, owner: league.owner});
+        throw new Error('NOT_OWNER');
+    }
+
+    if (request.status !== JoinRequestStatus.PENDING) {
+        logger.error('LeagueOps.Service.ts: denyJoinRequest() - request is not pending', {requestId, status: request.status});
+        throw new Error('REQUEST_NOT_PENDING');
+    }
+
+    const updatedRequest = await prisma.$transaction(async (tx) => {
+        const claim = await tx.leagueJoinRequest.updateMany({
+            where: { id: requestId, status: JoinRequestStatus.PENDING },
+            data: { status: JoinRequestStatus.DENIED },
+        });
+        if (claim.count === 0) {
+            logger.error('LeagueOps.Service.ts: denyJoinRequest() - lost the race, request no longer pending', {requestId});
+            throw new Error('REQUEST_NOT_PENDING');
+        }
+        return tx.leagueJoinRequest.findUniqueOrThrow({ where: { id: requestId } });
+    });
+
+    await notificationService.makeNewNotification(
+        'SERVER', request.requester, `Your request to join "${league.leagueName}" has been denied.`,
+        NotificationType.JOIN_REQUEST_DENIED, request.id,
+    );
+
+    logger.info('LeagueOps.Service.ts: denyJoinRequest() - denied and requester notified', {requestId, leagueName: league.leagueName});
+    return updatedRequest;
+};
+
+// Doc: Returns all PENDING LeagueJoinRequest rows for leagues owned by the given email, used to
+// Doc: hydrate the owner's view of outstanding requests (e.g. beyond just their notifications).
+// Doc: Args: email (string) - the league owner's email
+// Doc: Returns: Promise<LeagueJoinRequest[]>
+export const getPendingJoinRequestsForOwner = async (email: string) => {
+    logger.debug('LeagueOps.Service.ts: getPendingJoinRequestsForOwner() - fetching pending requests', {email});
+
+    const ownedLeagues = await prisma.league.findMany({
+        where: { owner: email },
+        select: { leagueName: true, franchise: true, season: true },
+    });
+    if (ownedLeagues.length === 0) return [];
+
+    return prisma.leagueJoinRequest.findMany({
+        where: {
+            status: JoinRequestStatus.PENDING,
+            OR: ownedLeagues.map(l => ({ leagueName: l.leagueName, franchise: l.franchise, season: l.season })),
+        },
+        orderBy: { createdAt: 'asc' },
+    });
+};
+
 // Doc: Increases the maxPlayers cap for a league.
 // Doc: Args: leagueName (string) - The league to update, newMaxPlayers (number) - The new maximum player count
 // Doc: Returns: Promise<League> - The updated league record
@@ -346,9 +563,21 @@ export const increaseLeagueSize = async (leagueName: string, newMaxPlayers: numb
 // Doc: Queries the database for all rosters belonging to a specific league.
 // Doc: Args: leagueName (string) - The league name to filter by
 // Doc: Returns: Promise<Roster[]> - Array of roster records for the specified league
-export const getAllRostersByLeague = (leagueName: string) => {
+// Doc: Falls back to RosterHistory when a league has no live rosters — the case once a season has
+// Doc: been archived (see league.service.ts's archiveLeagueSeason()) and its rosters moved out of the
+// Doc: live Roster table. RosterHistory rows carry the same field shape as Roster (see schema.prisma),
+// Doc: so this is transparent to callers.
+export const getAllRostersByLeague = async (leagueName: string) => {
     logger.debug('LeagueOps.Service.ts: getAllRostersByLeague() - fetching rosters for league', {leagueName});
-    return prisma.roster.findMany({
+    const liveRosters = await prisma.roster.findMany({
+        where: {
+            leagueName: leagueName,
+        },
+    });
+    if (liveRosters.length > 0) return liveRosters;
+
+    logger.debug('LeagueOps.Service.ts: getAllRostersByLeague() - no live rosters, checking RosterHistory', {leagueName});
+    return prisma.rosterHistory.findMany({
         where: {
             leagueName: leagueName,
         },

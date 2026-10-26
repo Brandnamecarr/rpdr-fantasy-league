@@ -5,8 +5,8 @@
 // Doc: either side changes. Requires `input` (see SendNotificationInput in types/Interfaces.ts)
 // Doc: passed through POST /admin/workflows/execute.
 import logger from '../util/logger/LoggerImpl';
+import prisma from '../db/prisma.client';
 import { getDisplayNames } from '../services/user.service';
-import { makeNewNotification } from '../services/notification.service';
 import { WorkflowDefinition, WorkflowInput, SendNotificationInput } from '../types/Interfaces';
 
 // Doc: Narrows/validates the generic WorkflowInput bag into the shape SendNotification needs. Throws
@@ -49,7 +49,10 @@ async function resolveRecipientsStep(input?: WorkflowInput): Promise<string> {
     return `Resolved ${recipients.length} of ${notifInput.recipients.length} requested recipient(s).`;
 }
 
-// Doc: Step 2 — creates a Notification record for each resolved recipient.
+// Doc: Step 2 — creates a Notification record for each resolved recipient via a single batched
+// Doc: createMany call rather than sequential per-recipient writes. createMany is all-or-nothing and
+// Doc: only returns a row count (no per-recipient success/failure or created rows), so on error the
+// Doc: whole batch is reported as failed (0 sent) rather than faking partial-failure granularity.
 async function sendNotificationsStep(input?: WorkflowInput): Promise<string> {
     const notifInput = parseSendNotificationInput(input);
     const recipients = await resolveRecipients(notifInput);
@@ -59,14 +62,21 @@ async function sendNotificationsStep(input?: WorkflowInput): Promise<string> {
         return 'No recipients to notify.';
     }
 
-    let sent = 0;
-    for (const destination of recipients) {
-        const notif = await makeNewNotification(notifInput.source, destination, notifInput.content);
-        if (notif) sent++;
-    }
+    try {
+        const result = await prisma.notification.createMany({
+            data: recipients.map(destination => ({
+                source: notifInput.source,
+                destination,
+                content: notifInput.content,
+            })),
+        });
 
-    logger.info('SendNotification-L2-SendNotifications: notifications sent', { sent, requested: recipients.length });
-    return `Sent ${sent} of ${recipients.length} notification(s).`;
+        logger.info('SendNotification-L2-SendNotifications: notifications sent', { sent: result.count, requested: recipients.length });
+        return `Sent ${result.count} of ${recipients.length} notification(s).`;
+    } catch (error) {
+        logger.error('SendNotification-L2-SendNotifications: batch insert failed', { requested: recipients.length, error });
+        return `Sent 0 of ${recipients.length} notification(s) — batch insert failed.`;
+    }
 }
 
 export const sendNotification: WorkflowDefinition = {

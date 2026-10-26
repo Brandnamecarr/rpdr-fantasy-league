@@ -1,5 +1,6 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/logger/LoggerImpl";
+import { archiveLeagueSeason } from "./league.service";
 
 import { ActivityStatus, BracketName } from "@prisma/client";
 
@@ -15,14 +16,17 @@ export const getActiveSeasons = () => {
     });
 };
 
-// Doc: Queries the database for all upcoming seasons (activityStatus = 'INACTIVE').
+// Doc: Queries the database for all upcoming seasons (activityStatus = 'UPCOMING' — a season that
+// Doc: hasn't started airing yet). Distinct from 'INACTIVE', which now means "closed/archived" (see
+// Doc: league.service.ts's archiveLeagueSeason()) — the two used to be the same value, which caused a
+// Doc: just-closed season to incorrectly reappear here as "upcoming".
 // Doc: Args: None
-// Doc: Returns: Promise<ActiveSeasons[]> - Array of inactive/upcoming season records
+// Doc: Returns: Promise<ActiveSeasons[]> - Array of upcoming season records
 export const getUpcomingSeasons = () => {
-    logger.debug('ActiveSeasons.Service.ts: getUpcomingSeasons() - fetching all INACTIVE seasons');
+    logger.debug('ActiveSeasons.Service.ts: getUpcomingSeasons() - fetching all UPCOMING seasons');
     return prisma.activeSeasons.findMany({
         where: {
-            activityStatus: 'INACTIVE',
+            activityStatus: 'UPCOMING',
         },
         orderBy: [{ franchise: 'asc' }, { season: 'asc' }],
     });
@@ -68,11 +72,24 @@ export const getBrackets = (franchise: string, season: number) => {
     });
 };
 
-// Doc: Updates the activity status (and optionally dates) of a season in the database.
+// Doc: Updates the activity status (and optionally dates) of a season in the database. Setting
+// Doc: status to INACTIVE also archives every League/Roster row for that franchise+season (see
+// Doc: league.service.ts's archiveLeagueSeason()) — moving them into LeagueHistory/RosterHistory and
+// Doc: deleting them from the live tables, which is what makes them disappear from the leaderboard
+// Doc: and active-league views and start showing up under Previous Leagues instead. archiveLeagueSeason
+// Doc: is idempotent, so calling updateSeason with INACTIVE more than once for the same franchise/season
+// Doc: (e.g. as a one-time backfill for seasons that were already INACTIVE before this behavior existed)
+// Doc: is safe. Not run in the same transaction as the status update below — a status-update failure
+// Doc: immediately after a successful archive is an accepted, low-probability edge case.
 // Doc: Args: franchise (string) - The franchise name, season (number) - The season number, status (ActivityStatus) - The new activity status
 // Doc: Returns: Promise<ActiveSeasons> - The updated season record
 export const updateSeason = async (franchise: string, season: number, status: ActivityStatus, startDate?: Date, endDate?: Date) => {
     logger.info('ActiveSeasons.Service.ts: updateSeason() - updating season status', {franchise, season, newStatus: status});
+
+    if (status === 'INACTIVE') {
+        await archiveLeagueSeason(franchise, season);
+    }
+
     return await prisma.activeSeasons.update({
         where: {
             franchise_season: {
@@ -94,8 +111,8 @@ export const getSeasonRecord = (franchise: string, season: number) => {
     });
 };
 
-// Doc: Upserts an upcoming season's premiere date — creates the ActiveSeasons record (as INACTIVE)
-// Doc: if it doesn't exist yet, or updates premiereDate on the existing record without touching its
+// Doc: Upserts an upcoming season's premiere date — creates the ActiveSeasons record (as UPCOMING,
+// Doc: the schema default) if it doesn't exist yet, or updates premiereDate on the existing record without touching its
 // Doc: activityStatus (so this never demotes a season that's already ACTIVE). Meant to be called by
 // Doc: the FetchUpcomingSeasons workflow (src/workflows/fetchUpcomingSeasons.ts) once its data source
 // Doc: is chosen — not exposed over HTTP, since the workflow calls it directly in-process.

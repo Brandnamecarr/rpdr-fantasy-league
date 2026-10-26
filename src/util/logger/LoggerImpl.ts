@@ -88,6 +88,12 @@ export class ConsoleLogger implements CustomLogger {
         this.log(LogLevel.ERROR, message, context);
     }
 
+    // Doc: Public method to log warning messages
+    // Doc: Args: message (string) - Warning message, context (object?) - Optional context data
+    public warn(message: string, context?: object): void {
+        this.log(LogLevel.WARN, message, context);
+    }
+
     // Doc: Public method to log info messages
     // Doc: Args: message (string) - Info message, context (object?) - Optional context data
     public info(message: string, context?: object): void {
@@ -106,6 +112,7 @@ export class ConsoleLogger implements CustomLogger {
 function parseLogLevel(raw?: string): LogLevel {
     switch (raw?.toUpperCase()) {
         case 'ERROR': return LogLevel.ERROR;
+        case 'WARN':  return LogLevel.WARN;
         case 'DEBUG': return LogLevel.DEBUG;
         default:      return LogLevel.INFO;
     }

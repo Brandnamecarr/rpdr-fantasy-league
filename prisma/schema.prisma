@@ -14,6 +14,20 @@ model User {
   displayName String?
   isAdmin     Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  membership Membership?
+}
+
+model Membership {
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  hasActiveMembership         Boolean   @default(false)
+  stripeCustomerId            String?   @unique
+  stripeSubscriptionId        String?   @unique
+  membershipCancelAtPeriodEnd Boolean   @default(false)
+  membershipRenewsAt          DateTime?
 }
 
 model League {
@@ -40,14 +54,81 @@ model Roster {
   pointUpdates  Int[]
 }
 
+model LeagueHistory {
+  id               Int      @id @default(autoincrement())
+  originalLeagueId Int      @unique
+  leagueName       String
+  franchise        String
+  season           Int
+  owner            String
+  users            String[]
+  maxPlayers       Int
+  maxQueensPerTeam Int
+  createdAt        DateTime
+  archivedAt       DateTime @default(now())
+
+  @@index([franchise, season])
+}
+
+model RosterHistory {
+  recordId         Int      @id @default(autoincrement())
+  originalRecordId Int      @unique
+  leagueName       String
+  username         String
+  teamName         String
+  franchise        String
+  season           Int
+  queens           String[]
+  currentPoints    Int
+  pointUpdates     Int[]
+  archivedAt       DateTime @default(now())
+
+  @@index([franchise, season])
+  @@index([leagueName])
+}
+
 model Notification {
-  notifId     Int      @id @default(autoincrement())
-  source      String
-  destination String
-  resolved    Boolean  @default(false)
-  content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  notifId       Int              @id @default(autoincrement())
+  source        String
+  destination   String
+  resolved      Boolean          @default(false)
+  content       String
+  type          NotificationType @default(GENERIC)
+  joinRequestId Int?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([destination])
+  @@index([destination, resolved])
+}
+
+enum NotificationType {
+  GENERIC
+  JOIN_REQUEST_RECEIVED
+  JOIN_REQUEST_APPROVED
+  JOIN_REQUEST_DENIED
+}
+
+enum JoinRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model LeagueJoinRequest {
+  id         Int               @id @default(autoincrement())
+  leagueName String
+  franchise  String
+  season     Int
+  requester  String
+  teamName   String
+  queens     String[]
+  status     JoinRequestStatus @default(PENDING)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([leagueName, franchise, season])
+  @@index([requester])
 }
 
 model Queen {
@@ -69,6 +150,7 @@ enum QueenStatus {
 }
 
 enum ActivityStatus {
+  UPCOMING
   ACTIVE
   INACTIVE
 }
@@ -83,7 +165,7 @@ model ActiveSeasons {
   seasonId        Int            @id @default(autoincrement())
   franchise       String
   season          Int
-  activityStatus  ActivityStatus @default(INACTIVE)
+  activityStatus  ActivityStatus @default(UPCOMING)
   premiereDate    String?
   isUsingBrackets Boolean        @default(false)
   bracketCount    Int?

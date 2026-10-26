@@ -7,7 +7,7 @@ import * as leagueService from '../services/league.service';
 import * as logService from '../services/log.service';
 import * as workflowService from '../services/workflow.service';
 import * as adminService from '../services/admin.service';
-import { generateToken } from '../util/credentials/TokenManager';
+import { generateToken, ADMIN_EMAILS } from '../util/credentials/TokenManager';
 import { RestoreDatabaseBody, RestoreFromBackupBody } from '../types/Interfaces';
 
 // Doc: Parses a date query param — matches the convention in activeSeasons.controller.ts (accepts MM-DD-YYYY).
@@ -23,7 +23,7 @@ const parseDateField = (value?: string): Date | undefined => {
 export const getAllUsers = async (_req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
-            select: { id: true, email: true, displayName: true, createdAt: true },
+            select: { id: true, email: true, displayName: true, createdAt: true, isAdmin: true },
             orderBy: { email: 'asc' },
         });
         return res.status(200).json(users);
@@ -56,19 +56,19 @@ export const resetUserPassword = async (req: Request, res: Response) => {
     }
 };
 
-// Doc: Mints a short-lived user JWT for whichever real user has isAdmin=true (set via
-// Doc: POST /users/setAdmin), so the admin panel (which only holds the static admin key) can call
-// Doc: JWT-protected (`protect`) routes it doesn't have a dedicated protectAdmin mirror for. Access
-// Doc: to this endpoint is itself gated by protectAdmin, so no password check is needed here — the
-// Doc: admin key already proved who's asking. If multiple users are flagged isAdmin, the first match
-// Doc: is used.
+// Doc: Mints a short-lived user JWT for whichever real user's email is in the ADMIN_EMAIL allowlist
+// Doc: (comma-separated for multiple admins), so the admin panel (which only holds the static admin
+// Doc: key) can call JWT-protected (`protect`) routes it doesn't have a dedicated protectAdmin mirror
+// Doc: for. Access to this endpoint is itself gated by protectAdmin, so no password check is needed
+// Doc: here — the admin key already proved who's asking. If multiple ADMIN_EMAIL addresses have
+// Doc: matching accounts, the first match is used.
 // Doc: Route: GET /admin/getJwt
 export const getAdminJwt = async (_req: Request, res: Response) => {
     try {
-        const admin = await prisma.user.findFirst({ where: { isAdmin: true } });
+        const admin = await prisma.user.findFirst({ where: { email: { in: ADMIN_EMAILS } } });
         if (!admin) {
-            logger.error('Admin.Controller.ts: getAdminJwt() - no user with isAdmin=true found');
-            return res.status(404).json({ Error: 'No admin account found — set isAdmin=true on a user via POST /users/setAdmin' });
+            logger.error('Admin.Controller.ts: getAdminJwt() - no user matching ADMIN_EMAIL found');
+            return res.status(404).json({ Error: 'No admin account found — create a user with an email listed in ADMIN_EMAIL' });
         }
         const token = generateToken({ id: admin.id, email: admin.email });
         return res.status(200).json({ token });

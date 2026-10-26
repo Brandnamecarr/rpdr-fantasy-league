@@ -1,7 +1,7 @@
 // Doc: Common TypeScript interfaces used throughout the application.
 // Doc: Defines data structures for authentication, requests, and input payloads.
 // Doc: HTTP request types (interfaces extending express.Request) live in ./CustomRequests instead.
-import { QueenStatus, BracketName, User, League, Roster, Notification, Queen, ActiveSeasons, Bracket, FanSurvey, FanSurveyData, SeasonFinaleResponse, EpisodeResult } from "@prisma/client";
+import { QueenStatus, BracketName, User, League, Roster, LeagueHistory, RosterHistory, Notification, NotificationType, Queen, ActiveSeasons, Bracket, FanSurvey, FanSurveyData, SeasonFinaleResponse, EpisodeResult } from "@prisma/client";
 
 // Doc: Payload structure for JWT tokens containing user identification
 // Doc: Properties: id (number) - user ID, email (string) - user email address
@@ -48,6 +48,7 @@ export interface CreateLeagueInput {
 // Doc: Methods: error(message, context?) - logs error messages, info(message, context?) - logs info messages, debug(message, context?) - logs debug messages
 export interface CustomLogger {
     error(message: string, context?: object): void;
+    warn(message: string, context?: object): void;
     info(message:string, context?: object): void;
     debug(message: string, content?: object): void;
 }
@@ -290,16 +291,34 @@ export interface GetNotifsForEmailBody {
     email: string;
 }
 
-// Doc: Request body for POST /notifications (makeNewNotification).
+// Doc: Request body for POST /notifications (makeNewNotification). type/joinRequestId are optional
+// Doc: and default to GENERIC/null (see notification.service.ts's makeNewNotification) so existing
+// Doc: callers of this route keep working unchanged.
 export interface MakeNewNotificationBody {
     source: string;
     destination: string;
     content: string;
+    type?: NotificationType;
+    joinRequestId?: number | null;
 }
 
 // Doc: Request body for updating a notification's resolved status.
 export interface UpdateNotifStatusBody {
     notifId: number;
+}
+
+// Doc: Request body for POST /leagueOps/requestToJoinLeague. requestingEmail comes from the JWT, not the body.
+export interface RequestToJoinLeagueBody {
+    leagueName: string;
+    franchise: string;
+    season: number;
+    teamName: string;
+    queens: string[];
+}
+
+// Doc: Request body for POST /leagueOps/approveJoinRequest and POST /leagueOps/denyJoinRequest.
+export interface JoinRequestIdBody {
+    requestId: number;
 }
 
 // Doc: Minimal shape used to inspect a caught value without importing Prisma's error classes —
@@ -323,6 +342,8 @@ export interface RestoreDatabaseBody {
         users?: DumpTable<Omit<User, 'password'>>;
         leagues?: DumpTable<League>;
         rosters?: DumpTable<Roster>;
+        leagueHistory?: DumpTable<LeagueHistory>;
+        rosterHistory?: DumpTable<RosterHistory>;
         notifications?: DumpTable<Notification>;
         queens?: DumpTable<Queen>;
         activeSeasons?: DumpTable<ActiveSeasons>;
@@ -332,6 +353,15 @@ export interface RestoreDatabaseBody {
         seasonFinaleResponses?: DumpTable<SeasonFinaleResponse>;
         episodeResults?: DumpTable<EpisodeResult>;
     };
+}
+
+// Doc: Cached membership status returned by GET /subscription/status — read straight from the
+// Doc: User row, no live Stripe call. Mirrors the fields written by the (not-yet-implemented)
+// Doc: Stripe webhook handler in subscription.service.ts.
+export interface SubscriptionStatus {
+    hasActiveMembership: boolean;
+    membershipCancelAtPeriodEnd: boolean;
+    membershipRenewsAt: Date | null;
 }
 
 // Doc: Request body for POST /admin/restoreFromBackup — restores the database from a JSON dump
