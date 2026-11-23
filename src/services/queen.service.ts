@@ -1,7 +1,7 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/logger/LoggerImpl";
 import * as ENUMS from '../enums/enums';
-import * as INTERFACES from '../types/Interfaces';
+import * as API_TYPES from '../types/api-types';
 import { QueenStatus } from "@prisma/client";
 
 // Doc: Queries the database for all queen records.
@@ -68,9 +68,9 @@ export const addNewQueen = (name: string, franchise: string, season: number, loc
 };
 
 // Doc: Creates multiple queen records in the database in bulk, skipping duplicates.
-// Doc: Args: queenData (INTERFACES.QueenInput[]) - Array of queen data objects to insert
+// Doc: Args: queenData (API_TYPES.QueenInput[]) - Array of queen data objects to insert
 // Doc: Returns: Promise<BatchPayload> - Count of created records
-export const addNewQueens = async (queenData: INTERFACES.QueenInput[]) => {
+export const addNewQueens = async (queenData: API_TYPES.QueenInput[]) => {
     logger.debug('Queen.Service.ts: addNewQueens() - bulk inserting queen records', {count: queenData.length});
     return prisma.queen.createMany({
         data: queenData,

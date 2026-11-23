@@ -2,7 +2,7 @@
 // Doc: Works with any SMTP provider - Gmail, SendGrid, Mailgun, AWS SES SMTP, etc. Configure via env vars below.
 import nodemailer, { Transporter } from 'nodemailer';
 import logger from '../logger/LoggerImpl';
-import { EmailInput } from '../../types/Interfaces';
+import { EmailInput } from '../../types/domain-types';
 
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = Number(process.env.SMTP_PORT ?? 587);

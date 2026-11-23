@@ -2,12 +2,12 @@
 // Doc: explicit, admin-selected list of user emails — the notification equivalent of SendEmail, but
 // Doc: targeted at a specific group of users instead of a league/franchise/season. `id` is the
 // Doc: contract with the frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) — keep it in sync if
-// Doc: either side changes. Requires `input` (see SendNotificationInput in types/Interfaces.ts)
+// Doc: either side changes. Requires `input` (see SendNotificationInput in types/domain-types.ts)
 // Doc: passed through POST /admin/workflows/execute.
 import logger from '../util/logger/LoggerImpl';
 import prisma from '../db/prisma.client';
 import { getDisplayNames } from '../services/user.service';
-import { WorkflowDefinition, WorkflowInput, SendNotificationInput } from '../types/Interfaces';
+import { WorkflowDefinition, WorkflowInput, SendNotificationInput } from '../types/domain-types';
 
 // Doc: Narrows/validates the generic WorkflowInput bag into the shape SendNotification needs. Throws
 // Doc: (failing the step, surfaced to the admin UI) if required fields are missing or malformed.

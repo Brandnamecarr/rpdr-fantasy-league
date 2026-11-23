@@ -5,7 +5,7 @@
 import { exec } from 'child_process';
 import * as os from 'os';
 import logger from '../util/logger/LoggerImpl';
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 import { getDailyVisitorCount, getRecentDailyVisitorCounts } from '../services/siteVisit.service';
 
 const BYTES_PER_GB = 1024 ** 3;

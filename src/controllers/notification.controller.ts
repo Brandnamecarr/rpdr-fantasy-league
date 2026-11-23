@@ -1,8 +1,8 @@
 import { Response } from "express";
 import * as notifService from '../services/notification.service';
 import logger from "../util/logger/LoggerImpl";
-import { AuthRequest } from "../types/CustomRequests";
-import { GetNotifsForEmailBody, MakeNewNotificationBody, UpdateNotifStatusBody } from "../types/Interfaces";
+import { AuthRequest } from "../types/api-types";
+import { GetNotifsForEmailBody, MakeNewNotificationBody, UpdateNotifStatusBody } from "../types/api-types";
 import { isAdminEmail } from "../util/credentials/TokenManager";
 
 // Doc: Retrieves all notifications for a specific user.

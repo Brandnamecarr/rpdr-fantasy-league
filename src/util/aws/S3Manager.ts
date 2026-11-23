@@ -1,7 +1,7 @@
 // Doc: S3 utility for reading and writing files in the rpdr-fantasy-league bucket.
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import logger from '../logger/LoggerImpl';
-import { S3FileInput } from '../../types/Interfaces';
+import { S3FileInput } from '../../types/domain-types';
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET ?? 'rpdr-fantasy-league';
 const REGION = process.env.AWS_REGION ?? 'us-west-2';

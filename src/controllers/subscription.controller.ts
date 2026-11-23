@@ -1,8 +1,8 @@
 import { Response } from "express";
 import * as subscriptionService from "../services/subscription.service";
 import logger from "../util/logger/LoggerImpl";
-import { AuthRequest } from "../types/CustomRequests";
-import { CaughtError } from "../types/Interfaces";
+import { AuthRequest } from "../types/api-types";
+import { CaughtError } from "../types/domain-types";
 
 // Doc: POST /subscription/start — real route, but Stripe Checkout is not implemented yet.
 // Doc: Always responds 501 with the NOT_IMPLEMENTED sentinel so the frontend can build against the

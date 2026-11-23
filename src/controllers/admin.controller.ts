@@ -8,7 +8,7 @@ import * as logService from '../services/log.service';
 import * as workflowService from '../services/workflow.service';
 import * as adminService from '../services/admin.service';
 import { generateToken, ADMIN_EMAILS } from '../util/credentials/TokenManager';
-import { RestoreDatabaseBody, RestoreFromBackupBody } from '../types/Interfaces';
+import { RestoreDatabaseBody, RestoreFromBackupBody } from '../types/api-types';
 
 // Doc: Parses a date query param — matches the convention in activeSeasons.controller.ts (accepts MM-DD-YYYY).
 const parseDateField = (value?: string): Date | undefined => {

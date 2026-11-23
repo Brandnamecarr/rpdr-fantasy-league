@@ -3,7 +3,7 @@
 // Doc: actual work and is executed sequentially by workflow.service.ts.
 // Doc: Steps should be short/idempotent-ish and log via `logger` (not console.log) so their output
 // Doc: surfaces in the admin Logs tab (GET /admin/logs) as well as the live execution modal.
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 import { testWorkflow } from './testWorkflow';
 import { testS3 } from './testS3';
 import { lookFinder } from './lookFinder';

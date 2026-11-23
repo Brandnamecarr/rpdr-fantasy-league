@@ -3,7 +3,7 @@
 // Doc: keep it in sync if either side changes.
 import logger from '../util/logger/LoggerImpl';
 import { listKeys } from '../util/aws/S3Manager';
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 
 async function countS3Files(): Promise<string> {
     const keys = await listKeys();

@@ -6,7 +6,7 @@ import { getByFranchiseAndSeason as getQueensByFranchiseAndSeason } from "./quee
 import { isOverFreeLeagueLimit } from "./subscription.service";
 import * as notificationService from "./notification.service";
 import {League, Roster, User, BracketName, Prisma} from '@prisma/client';
-import { TalliedEpisodeSurvey } from '../types/Interfaces';
+import { TalliedEpisodeSurvey } from '../types/domain-types';
 import {WeeklyBonusPoints, PointManipulation, LeaguePointAwards, FanSurveyPoints} from '../enums/enums';
 import { QueenStatus, JoinRequestStatus, NotificationType } from "@prisma/client";
 

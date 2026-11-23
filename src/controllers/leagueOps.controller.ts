@@ -4,12 +4,13 @@ import logger from "../util/logger/LoggerImpl";
 import * as leagueService from '../services/league.service';
 import { isOverFreeLeagueLimit } from '../services/subscription.service';
 import { getSeasonRecord, getSurveyWindow } from '../services/activeSeasons.service';
-import { AuthRequest } from '../types/CustomRequests';
 import {
+    AuthRequest,
     WeeklyUpdateBody, WeeklySurveyBody, AddUserToLeagueBody, RemoveUserFromLeagueBody,
     GetRostersByLeagueBody, OpenFanSurveyBody, SubmitFanSurveyBody, ComputeFanSurveyBody,
-    SubmitSeasonFinaleBody, IncreaseLeagueSizeBody, RequestToJoinLeagueBody, JoinRequestIdBody, CaughtError,
-} from '../types/Interfaces';
+    SubmitSeasonFinaleBody, IncreaseLeagueSizeBody, RequestToJoinLeagueBody, JoinRequestIdBody,
+} from '../types/api-types';
+import { CaughtError } from '../types/domain-types';
 
 import {League, User, Roster} from '@prisma/client';
 

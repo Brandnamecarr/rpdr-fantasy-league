@@ -3,7 +3,7 @@
 // Doc: uploaded file, then opens that episode's weekly fan survey. `id` is the contract with the
 // Doc: frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) — keep it in sync if either side
 // Doc: changes. Unlike the other workflows here, LookFinder requires `input` (see LookFinderInput in
-// Doc: types/Interfaces.ts) passed through POST /admin/workflows/execute.
+// Doc: types/domain-types.ts) passed through POST /admin/workflows/execute.
 import * as cheerio from 'cheerio';
 import { BracketName } from '@prisma/client';
 import prisma from '../db/prisma.client';
@@ -11,7 +11,7 @@ import logger from '../util/logger/LoggerImpl';
 import { putFile, listKeys } from '../util/aws/S3Manager';
 import { getByFranchiseAndSeason } from '../services/queen.service';
 import { openFanSurvey } from '../services/leagueOps.service';
-import { WorkflowDefinition, WorkflowInput, LookFinderInput } from '../types/Interfaces';
+import { WorkflowDefinition, WorkflowInput, LookFinderInput } from '../types/domain-types';
 import { FRANCHISE_WIKI_PAGES, NON_RUNWAY_HEADER_KEYWORDS, EXTENSION_CONTENT_TYPES } from './workflow.constants';
 
 const BRACKET_NAMES: BracketName[] = ['A', 'B', 'C'];

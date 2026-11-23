@@ -4,7 +4,7 @@
 import logger from '../util/logger/LoggerImpl';
 import { putFile } from '../util/aws/S3Manager';
 import { buildDatabaseDump } from '../services/admin.service';
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 
 // Doc: Filesystem/S3-key-safe timestamp, e.g. "2026-08-31T14-05-22Z" (colons swapped for dashes).
 const buildTimestamp = (): string => new Date().toISOString().replace(/:/g, '-');

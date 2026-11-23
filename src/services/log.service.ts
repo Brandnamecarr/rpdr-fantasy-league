@@ -2,12 +2,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import logger from '../util/logger/LoggerImpl';
-import * as INTERFACES from '../types/Interfaces';
+import * as INTERFACES from '../types/domain-types';
+import { LogEntriesResult } from '../types/api-types';
 
 // Doc: Reads and filters the app.log file (JSONL), newest-first, paginated.
 // Doc: Args: filters (LogFilters) - level/startDate/endDate/search/page/pageSize
 // Doc: Returns: LogEntriesResult - { entries, total }
-export const getLogEntries = (filters: INTERFACES.LogFilters): INTERFACES.LogEntriesResult => {
+export const getLogEntries = (filters: INTERFACES.LogFilters): LogEntriesResult => {
     logger.debug('Log.Service.ts: getLogEntries() - reading logs/app.log', {filters});
 
     const logFilePath = path.join(process.cwd(), 'logs/app.log');

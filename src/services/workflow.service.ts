@@ -7,7 +7,7 @@ import { randomUUID } from 'crypto';
 import prisma from '../db/prisma.client';
 import logger from '../util/logger/LoggerImpl';
 import { getWorkflowDefinition } from '../workflows/workflow.definitions';
-import { ExecutionState, WorkflowInput } from '../types/Interfaces';
+import { ExecutionState, WorkflowInput } from '../types/domain-types';
 
 // Doc: executionId -> live execution state. Cleared out after EXECUTION_TTL_MS once terminal.
 const executions = new Map<string, ExecutionState>();

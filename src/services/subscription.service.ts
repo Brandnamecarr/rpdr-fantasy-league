@@ -1,6 +1,6 @@
 import prisma from "../db/prisma.client";
 import logger from "../util/logger/LoggerImpl";
-import { SubscriptionStatus } from "../types/Interfaces";
+import { SubscriptionStatus } from "../types/api-types";
 
 // Doc: NOT_IMPLEMENTED — no Stripe integration exists yet. This function intentionally does no
 // Doc: Stripe work (no Customer creation, no Checkout Session). It exists so the real route/controller

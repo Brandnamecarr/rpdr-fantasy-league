@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as queenService from '../services/queen.service';
 import logger from "../util/logger/LoggerImpl";
-import * as INTERFACES from '../types/Interfaces';
+import * as API_TYPES from '../types/api-types';
 import { QueenStatus } from "@prisma/client";
 
 // Doc: Retrieves all queen records from the database.
@@ -115,7 +115,7 @@ export const getByFranchiseAndSeason = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing {name: string, franchise: string, season: number, status: QueenStatus, location?: string}, res (Response) - Express response object
 // Doc: Route: Likely POST /queens
 export const addNewQueen = async (req: Request, res: Response) => {
-    const {name, franchise, season, status, location} = req.body as INTERFACES.QueenInput;
+    const {name, franchise, season, status, location} = req.body as API_TYPES.QueenInput;
     logger.debug('Queen.Controller.ts: addNewQueen() - request received', {name, franchise, season, status, location});
     const loc: string = location || "UNKNOWN";
     try {
@@ -136,7 +136,7 @@ export const addNewQueen = async (req: Request, res: Response) => {
 // Doc: Args: req (Request) - Express request object with body containing array of {name: string, franchise: string, season: number, status: QueenStatus, location?: string}[], res (Response) - Express response object
 // Doc: Route: Likely POST /queens/bulk
 export const addNewQueens = async (req: Request, res: Response) => {
-    const queensData = req.body as INTERFACES.QueenInput[];
+    const queensData = req.body as API_TYPES.QueenInput[];
     logger.debug('Queen.Controller.ts: addNewQueens() - bulk insert request received', {count: Array.isArray(queensData) ? queensData.length : 'invalid'});
 
     if(!Array.isArray(queensData) || queensData.length === 0) {

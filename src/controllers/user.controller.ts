@@ -4,8 +4,8 @@ import * as passwordManager from "../util/credentials/PasswordManager";
 import * as tokenManager from '../util/credentials/TokenManager';
 import * as notificationService from '../services/notification.service';
 import logger from "../util/logger/LoggerImpl";
-import { UserTokenPayload, UpdateDisplayNameBody, CaughtError } from "../types/Interfaces";
-import { AuthRequest } from "../types/CustomRequests";
+import { UserTokenPayload, CaughtError } from "../types/domain-types";
+import { AuthRequest, UpdateDisplayNameBody } from "../types/api-types";
 
 // Doc: Retrieves all user records from the database.
 // Doc: Args: req (Request) - Express request object, res (Response) - Express response object

@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import * as seasonService from "../services/activeSeasons.service";
 import { getUserByName } from "../services/user.service";
 import logger from "../util/logger/LoggerImpl";
-import { CaughtError } from "../types/Interfaces";
-import { AuthRequest } from "../types/CustomRequests";
+import { CaughtError } from "../types/domain-types";
+import { AuthRequest } from "../types/api-types";
 import { ActivityStatus } from "@prisma/client";
 
 // Doc: Retrieves all seasons with active status from the database.

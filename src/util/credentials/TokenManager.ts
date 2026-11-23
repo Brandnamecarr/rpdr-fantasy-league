@@ -3,8 +3,8 @@
 import jwt from 'jsonwebtoken';
 import logger from '../logger/LoggerImpl';
 import { NextFunction, Request, Response } from 'express';
-import { UserTokenPayload } from '../../types/Interfaces';
-import { AuthRequest } from '../../types/CustomRequests';
+import { UserTokenPayload } from '../../types/domain-types';
+import { AuthRequest } from '../../types/api-types';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
 

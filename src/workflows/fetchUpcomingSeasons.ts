@@ -9,7 +9,7 @@
 import logger from '../util/logger/LoggerImpl';
 // TODO: once a source exists, import setUpcomingSeason from '../services/activeSeasons.service'
 // and, for each fetched entry, call `await setUpcomingSeason(franchise, season, premiereDate)` to persist it.
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 
 // Doc: Step 1 — placeholder until a source is chosen (a wiki scrape like LookFinder, an RSS/announcement
 // Doc: feed, a manual API, etc.). Logs a TODO and returns without touching the database.

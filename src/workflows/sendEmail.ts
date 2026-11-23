@@ -2,12 +2,12 @@
 // Doc: or "all subscribers") and sends each of them an email with the given subject/message.
 // Doc: `id` is the contract with the frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) —
 // Doc: keep it in sync if either side changes. Like LookFinder, SendEmail requires `input` (see
-// Doc: SendEmailInput in types/Interfaces.ts) passed through POST /admin/workflows/execute.
+// Doc: SendEmailInput in types/domain-types.ts) passed through POST /admin/workflows/execute.
 // Doc: Email sending isn't implemented yet — step 2 only logs where the call to the email utility
 // Doc: would go once one exists.
 import logger from '../util/logger/LoggerImpl';
 import { getLeaguesByFranchiseAndSeason } from '../services/league.service';
-import { WorkflowDefinition, WorkflowInput, SendEmailInput } from '../types/Interfaces';
+import { WorkflowDefinition, WorkflowInput, SendEmailInput } from '../types/domain-types';
 
 // Doc: Narrows/validates the generic WorkflowInput bag into the shape SendEmail needs. Throws
 // Doc: (failing the step, surfaced to the admin UI) if required fields are missing or malformed.

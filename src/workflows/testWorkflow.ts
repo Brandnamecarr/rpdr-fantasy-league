@@ -2,7 +2,7 @@
 // Doc: `id` is the contract with the frontend (WorkflowsTab.tsx's hardcoded WORKFLOWS list) —
 // Doc: keep it in sync if either side changes.
 import logger from '../util/logger/LoggerImpl';
-import { WorkflowDefinition } from '../types/Interfaces';
+import { WorkflowDefinition } from '../types/domain-types';
 
 export const testWorkflow: WorkflowDefinition = {
     id: 'test-workflow',

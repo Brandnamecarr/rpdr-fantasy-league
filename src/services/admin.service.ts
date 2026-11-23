@@ -2,7 +2,7 @@ import * as bcrypt from 'bcrypt';
 import prisma from '../db/prisma.client';
 import logger from '../util/logger/LoggerImpl';
 import { getFile, listKeys } from '../util/aws/S3Manager';
-import { RestoreDatabaseBody } from '../types/Interfaces';
+import { RestoreDatabaseBody } from '../types/api-types';
 
 const BACKUP_PREFIX = 'database_backup/';
 
