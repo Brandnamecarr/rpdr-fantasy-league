@@ -1,0 +1,62 @@
+# Enforces the PR rules in docs/workflow.md:
+#   - the PR links at least one issue ("Closes #123" or "Closes owner/repo#123")
+#   - every linked issue is labeled ready-for-dev
+#   - the "What Changed" and "Proof of Testing" template sections are filled in
+# The owner can add the `skip-issue-check` label to skip the linked-issue rule for
+# housekeeping PRs. AI agents must never add that label themselves.
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  workflow-rules:
+    name: Linked ready-for-dev issue and filled-in template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { checkPrBody, linkedIssues } = require('./.github/scripts/workflow-checks.cjs');
+            const pr = context.payload.pull_request;
+            const labels = pr.labels.map((l) => l.name);
+            const problems = checkPrBody(pr.body);
+            const passed = [];
+
+            if (labels.includes('skip-issue-check')) {
+              core.notice('`skip-issue-check` label present: the linked-issue rule was skipped.');
+            } else {
+              const links = linkedIssues(pr.body, context.repo);
+              if (links.length === 0) {
+                problems.push('No linked issue. Under **Related Issue**, add `Closes #123` (or `Closes owner/repo#123` for another repo).');
+              }
+              for (const l of links) {
+                const ref = `${l.owner}/${l.repo}#${l.number}`;
+                try {
+                  const { data } = await github.rest.issues.get({ owner: l.owner, repo: l.repo, issue_number: l.number });
+                  const names = data.labels.map((x) => (typeof x === 'string' ? x : x.name));
+                  if (data.pull_request) problems.push(`${ref} is a pull request, not an issue.`);
+                  else if (!names.includes('ready-for-dev')) problems.push(`${ref} is not labeled \`ready-for-dev\`. Nothing gets worked on until its issue is ready.`);
+                  else passed.push(`${ref} is ready-for-dev`);
+                } catch (e) {
+                  problems.push(`Could not read ${ref} (${e.status || e.message}). Check the issue number.`);
+                }
+              }
+            }
+
+            await core.summary
+              .addHeading(problems.length ? 'PR checks failed' : 'PR checks passed', 3)
+              .addList(problems.length ? problems : (passed.length ? passed : ['Template sections filled in']))
+              .addRaw('See docs/workflow.md for the rules.')
+              .write();
+            if (problems.length) core.setFailed(problems.join('\n'));
