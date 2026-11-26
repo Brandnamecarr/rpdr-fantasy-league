@@ -7,7 +7,10 @@ import {League, User, Roster} from '@prisma/client';
 // Doc: Returns: Promise<User[]> - Array of all user records
 export const getUsers = () => {
     logger.debug('User.Service.ts: fetching all users from database');
-    return prisma.user.findMany();  
+    // Doc: Explicit select: never return the password hash to a client.
+    return prisma.user.findMany({
+        select: { id: true, email: true, displayName: true, isAdmin: true, createdAt: true },
+    });
 };
 
 // Doc: Queries the database for all user email addresses.
@@ -109,8 +112,10 @@ export const getUserRecord = async (email: string) => {
     });
 
     // --- Return Combined Data ---
+    // Doc: Strip the password hash; this record is returned to the client by GET /users/getUserRecord.
+    const { password: _password, ...safeUserRecord } = userRecord;
     let collectedData = {
-        userRecord,
+        userRecord: safeUserRecord,
         leagues: uniqueLeagues,
         rosters: userRosters
     };

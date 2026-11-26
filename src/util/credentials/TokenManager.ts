@@ -5,6 +5,7 @@ import logger from '../logger/LoggerImpl';
 import { NextFunction, Request, Response } from 'express';
 import { UserTokenPayload } from '../../types/domain-types';
 import { AuthRequest } from '../../types/api-types';
+import prisma from '../../db/prisma.client';
 
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY ?? null;
 
@@ -97,4 +98,31 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
         logger.error('TokenManager.verifyToken() -> Token failed verification', {method: req.method, path: req.originalUrl, ip: req.ip});
         res.status(401).json({Error: `Token Failed`});
     }
+};
+
+// Doc: Express middleware for routes only admins may call. Mount it AFTER `protect` (it reads req.user).
+// Doc: A caller is an admin if their JWT email is in the ADMIN_EMAIL allowlist (isAdminEmail) or their
+// Doc: User row has isAdmin = true. The admin panel's JWT from GET /admin/getJwt is issued for an
+// Doc: ADMIN_EMAIL account, so admin-panel calls pass.
+// Doc: Returns: calls next() for admins; 403 for authenticated non-admins; 401 if protect didn't run; 500 on lookup failure
+export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const email = req.user?.email;
+    if (!email) {
+        logger.error('TokenManager.requireAdmin() -> no authenticated user; mount protect first', {method: req.method, path: req.originalUrl});
+        return res.status(401).json({Error: 'Not Authorized or no token present'});
+    }
+    if (isAdminEmail(email)) {
+        return next();
+    }
+    try {
+        const user = await prisma.user.findUnique({ where: { email: email.toUpperCase() }, select: { isAdmin: true } });
+        if (user?.isAdmin) {
+            return next();
+        }
+    } catch (error) {
+        logger.error('TokenManager.requireAdmin() -> failed to look up admin flag', {email, method: req.method, path: req.originalUrl, error});
+        return res.status(500).json({Error: 'Unable to verify admin access'});
+    }
+    logger.error('TokenManager.requireAdmin() -> non-admin attempted an admin-only route', {email, method: req.method, path: req.originalUrl, ip: req.ip});
+    return res.status(403).json({Error: 'Admin access required'});
 };

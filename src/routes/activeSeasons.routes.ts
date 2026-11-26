@@ -1,7 +1,7 @@
 // Doc: Route definitions for active seasons endpoints. All routes are protected by JWT authentication.
 // Doc: Base path: /activeSeasons (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/credentials/TokenManager";
+import { protect, requireAdmin } from "../util/credentials/TokenManager";
 import * as activeSeasonsController from "../controllers/activeSeasons.controller";
 
 const router = Router();
@@ -19,12 +19,12 @@ router.get("/getUpcomingSeasons", activeSeasonsController.getUpcomingSeasons);
 router.get("/getAllSeasons", activeSeasonsController.getAllSeasons);
 
 // Doc: POST /activeSeasons/addSeason - Creates a new season record (body: {franchise, season, isUsingBrackets?, bracketCount?})
-router.post("/addSeason", activeSeasonsController.addSeason);
+router.post("/addSeason", requireAdmin, activeSeasonsController.addSeason);
 // Doc: POST /activeSeasons/updateSeason - Updates a season's activity status (body: {franchise, season, status})
 router.post("/updateSeason", activeSeasonsController.updateSeason);
 
 // Doc: POST /activeSeason/addBracket - Creates a bracket record (body: {franchise, season, bracketName, queens})
-router.post("/addBracket", activeSeasonsController.addBracket);
+router.post("/addBracket", requireAdmin, activeSeasonsController.addBracket);
 // Doc: GET /activeSeason/getBrackets?franchise=&season= - Returns brackets for a season ordered A→B→C
 router.get("/getBrackets", activeSeasonsController.getBrackets);
 

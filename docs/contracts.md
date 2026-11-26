@@ -18,17 +18,17 @@
 
 ## Routes
 
-Auth key: **P** = public, **J** = JWT (`protect`), **A** = admin key (`protectAdmin`). Routes marked † are **not called by the web app** today: they're used by scripts or admins, are legacy, or are waiting on features that aren't built.
+Auth key: **P** = public, **J** = JWT (`protect`), **JA** = JWT from an admin account (`protect` + `requireAdmin`), **A** = admin key (`protectAdmin`). Routes marked † are **not called by the web app** today: they're used by scripts or admins, are legacy, or are waiting on features that aren't built.
 
 | Prefix | Auth | Routes |
 |---|---|---|
 | *(root)* | P | `GET /health`†, `GET /track/ping` |
-| `/users` | mixed | P: `POST auth`, `POST create` · J: `GET getAll`†, `POST updatePassword`, `GET getUserRecord`, `GET getAllEmails`†, `PATCH displayName`, `POST getDisplayNames` · A: `POST setAdmin`† |
+| `/users` | mixed | P: `POST auth`, `POST create` · J: `POST updatePassword`, `GET getUserRecord` (never includes `password`), `PATCH displayName`, `POST getDisplayNames` · JA: `GET getAll`†, `GET getAllEmails`† (the iOS app calls this during sign-up and has to stop) · A: `POST setAdmin`† |
 | `/league` | J | `GET getAllLeagues`, `GET allUserLeagues`†, `GET inactiveUserLeagues`, `GET getAvailableLeagues`, `GET getAvailableByFranAndSeason`†, `POST getLeague`, `POST createLeague` |
-| `/leagueOps` | J | Rosters: `GET getAllRosters`†, `GET getRostersByFranchiseAndSeason`, `POST getAllLeagueRosters`. Membership: `POST addUserToLeague`, `POST removeUserFromLeague`, `POST increaseLeagueSize`. Join requests: `POST requestToJoinLeague`†, `approveJoinRequest`†, `denyJoinRequest`†, `getPendingJoinRequests`† (**built on the backend, no UI yet**). Scoring: `POST weeklyUpdate`† (the web uses `/admin/weeklyUpdate`), `POST weeklySurvey`† (legacy). Surveys: `GET getOpenSurveys`, `GET getAllSurveys`, `POST openFanSurvey`†, `POST submitFanSurvey`, `POST computeFanSurvey`†, `POST submitSeasonFinale`. History: `GET getEpisodeHistory`, `GET getTalliedFanSurveyResults` |
+| `/leagueOps` | J | Rosters: `GET getAllRosters`†, `GET getRostersByFranchiseAndSeason`, `POST getAllLeagueRosters`. Membership: `POST addUserToLeague`, `POST removeUserFromLeague`, `POST increaseLeagueSize`. Join requests: `POST requestToJoinLeague`†, `approveJoinRequest`†, `denyJoinRequest`†, `getPendingJoinRequests`† (**built on the backend, no UI yet**). Scoring (**JA**): `POST weeklyUpdate`† (the web uses `/admin/weeklyUpdate`), `POST weeklySurvey`† (legacy). Surveys: `GET getOpenSurveys`, `GET getAllSurveys`, `POST openFanSurvey`† (**JA**), `POST submitFanSurvey`, `POST computeFanSurvey`† (**JA**), `POST submitSeasonFinale`. History: `GET getEpisodeHistory`, `GET getTalliedFanSurveyResults` |
 | `/notifications` | J | `POST get`, `POST getAllActive`, `POST newNotification`, `POST updateNotification` |
-| `/queens` | J | `GET getQueensByFranSeas`, `POST addNewQueens` · †: `GET getAll`, `GET getQueenByName`, `GET getQueenStatus`, `POST addNewQueen`, `POST updateQueenStatus`, `POST getQueenId` |
-| `/activeSeason` | J | `GET getActiveSeasons`, `GET getFinaleEligibleSeasons`, `GET getUpcomingSeasons`, `GET getAllSeasons`, `POST addSeason`, `POST updateSeason` (setting `INACTIVE` requires `User.isAdmin`), `POST addBracket`†, `GET getBrackets` |
+| `/queens` | J | `GET getQueensByFranSeas`, `POST addNewQueens` (**JA**) · †: `GET getAll`, `GET getQueenByName`, `GET getQueenStatus`, `POST addNewQueen` (**JA**), `POST updateQueenStatus` (**JA**), `POST getQueenId` |
+| `/activeSeason` | J | `GET getActiveSeasons`, `GET getFinaleEligibleSeasons`, `GET getUpcomingSeasons`, `GET getAllSeasons`, `POST addSeason` (**JA**), `POST updateSeason` (setting `INACTIVE` requires `User.isAdmin`), `POST addBracket`† (**JA**), `GET getBrackets` |
 | `/admin` | A | Scoring: `POST weeklyUpdate`, `POST endOfSeasonUpdate`, `POST computeSeasonFinale`†. Data: `GET users`, `GET activeSeasons`, `GET queens`, `GET brackets`, `GET tables`, `GET tables/:table`, `GET logs`. Users: `POST resetPassword`, `GET getJwt`. Database: `GET dump`†, `POST dump`† (restore), `GET backups`, `POST restoreFromBackup`†, `POST deleteLeague`†. Workflows: `POST workflows/execute`, `GET workflows/status/:executionId` |
 | `/subscription` | J (webhook P) | `POST start`, `POST cancel`, `GET status`, `POST webhook`: **all † and stubs**. `start` always throws `NOT_IMPLEMENTED`. |
 
