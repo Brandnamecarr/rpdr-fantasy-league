@@ -1,0 +1,26 @@
+name: Issue
+description: Report a bug, request a feature, or track a task.
+labels: ["needs-refinement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Give the issue a short, clear title above. New issues start as `needs-refinement`.
+        When the description and acceptance criteria are complete, swap that label for `ready-for-dev`.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to happen and why? Include any context, screenshots, or links.
+      placeholder: Users can't see the Notification Center from the Account Manager view...
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know this is done? One checkbox per testable outcome.
+      value: |
+        - [ ]
+    validations:
+      required: true

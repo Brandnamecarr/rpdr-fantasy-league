@@ -1,0 +1,102 @@
+# Keeps the `ready-for-dev` / `needs-refinement` labels in sync with the
+# RPDR-Fantasy-League project board.
+#
+#   ready-for-dev added    -> remove needs-refinement; add issue to board if missing;
+#                             move Backlog/no-status -> Ready (never moves In progress/review/Done)
+#   needs-refinement added -> remove ready-for-dev; add issue to board if missing;
+#                             move Ready/no-status -> Backlog
+#
+# Requires a repo secret PROJECT_TOKEN: a classic personal access token with the
+# `project` scope (GITHUB_TOKEN cannot access user-owned Projects). Without it,
+# the label swap still runs and the board step is skipped with a warning.
+name: Sync readiness labels with project board
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: readiness-${{ github.event.issue.number }}
+
+jobs:
+  sync:
+    if: github.event.label.name == 'ready-for-dev' || github.event.label.name == 'needs-refinement'
+    runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_NODE_ID: ${{ github.event.issue.node_id }}
+      LABEL: ${{ github.event.label.name }}
+      PROJECT_ID: PVT_kwHOBG1Fas4BKPqB
+      STATUS_FIELD_ID: PVTSSF_lAHOBG1Fas4BKPqBzg6K1Mc
+      STATUS_BACKLOG: f75ad846
+      STATUS_READY: 61e4505c
+    steps:
+      - name: Keep readiness labels mutually exclusive
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$LABEL" = "ready-for-dev" ]; then other="needs-refinement"; else other="ready-for-dev"; fi
+          if gh issue view "$ISSUE_NUMBER" --json labels -q '.labels[].name' | grep -qx "$other"; then
+            gh issue edit "$ISSUE_NUMBER" --remove-label "$other"
+            echo "Removed '$other' from #$ISSUE_NUMBER"
+          fi
+
+      - name: Update project board status
+        env:
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PROJECT_TOKEN secret is not set; skipping project board sync."
+            exit 0
+          fi
+
+          data=$(gh api graphql -f id="$ISSUE_NODE_ID" -f query='
+            query($id: ID!) {
+              node(id: $id) {
+                ... on Issue {
+                  projectItems(first: 20) {
+                    nodes {
+                      id
+                      project { id }
+                      fieldValueByName(name: "Status") {
+                        ... on ProjectV2ItemFieldSingleSelectValue { name }
+                      }
+                    }
+                  }
+                }
+              }
+            }')
+          item=$(jq -r --arg p "$PROJECT_ID" '[.data.node.projectItems.nodes[] | select(.project.id == $p)][0].id // ""' <<< "$data")
+          status=$(jq -r --arg p "$PROJECT_ID" '[.data.node.projectItems.nodes[] | select(.project.id == $p)][0].fieldValueByName.name // ""' <<< "$data")
+
+          if [ -z "$item" ]; then
+            item=$(gh api graphql -f p="$PROJECT_ID" -f c="$ISSUE_NODE_ID" \
+              -q '.data.addProjectV2ItemById.item.id' -f query='
+              mutation($p: ID!, $c: ID!) {
+                addProjectV2ItemById(input: { projectId: $p, contentId: $c }) { item { id } }
+              }')
+            echo "Added #$ISSUE_NUMBER to the project board"
+          fi
+
+          if [ "$LABEL" = "ready-for-dev" ]; then
+            case "$status" in ""|"Backlog") target="$STATUS_READY"; name="Ready" ;; *) target="" ;; esac
+          else
+            case "$status" in ""|"Ready") target="$STATUS_BACKLOG"; name="Backlog" ;; *) target="" ;; esac
+          fi
+
+          if [ -z "$target" ]; then
+            echo "Status is '$status'; leaving it unchanged."
+            exit 0
+          fi
+
+          gh api graphql -f p="$PROJECT_ID" -f i="$item" -f f="$STATUS_FIELD_ID" -f o="$target" --silent -f query='
+            mutation($p: ID!, $i: ID!, $f: ID!, $o: String!) {
+              updateProjectV2ItemFieldValue(input: {
+                projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $o }
+              }) { projectV2Item { id } }
+            }'
+          echo "Moved #$ISSUE_NUMBER from '${status:-no status}' to '$name'"
