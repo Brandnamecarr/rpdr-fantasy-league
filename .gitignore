@@ -14,3 +14,7 @@ logs/app.log
 .env
 dist/
 dist/*
+
+# Any env file except the committed template
+.env.*
+!.env.sample
