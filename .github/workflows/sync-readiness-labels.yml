@@ -22,12 +22,13 @@ permissions:
   contents: read
   issues: write
 
-concurrency:
-  group: readiness-${{ github.event.issue.number }}
-
 jobs:
   sync:
     if: github.event.label.name == 'ready-for-dev' || github.event.label.name == 'needs-refinement'
+    # Job-level (not workflow-level) so runs for unrelated labels skip without
+    # cancelling a pending readiness run when several labels are added at once.
+    concurrency:
+      group: readiness-${{ github.event.issue.number }}
     runs-on: ubuntu-latest
     env:
       GH_REPO: ${{ github.repository }}
