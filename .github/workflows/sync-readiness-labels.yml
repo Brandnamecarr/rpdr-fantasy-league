@@ -1,6 +1,6 @@
 # Enforces the definition of ready and keeps the `ready-for-dev` /
 # `needs-refinement` labels in sync with the RPDR-Fantasy-League project board.
-# Rules: docs/workflow.md. Checks: .github/scripts/workflow-checks.js.
+# Rules: docs/workflow.md. Checks: .github/scripts/workflow-checks.cjs.
 #
 #   ready-for-dev added    -> check the definition of ready. If it fails, swap back to
 #                             needs-refinement and comment with what's missing.
@@ -49,7 +49,7 @@ jobs:
           script: |
             const label = context.payload.label.name;
             if (label !== 'ready-for-dev') { core.setOutput('label', label); return; }
-            const { checkReady } = require('./.github/scripts/workflow-checks.js');
+            const { checkReady } = require('./.github/scripts/workflow-checks.cjs');
             const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number: context.issue.number });
             const problems = checkReady(issue);
             if (problems.length === 0) { core.setOutput('label', 'ready-for-dev'); return; }

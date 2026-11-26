@@ -117,7 +117,7 @@ When asked to work on something that has no ready issue, an agent says so and of
 
 ## Enforcement
 
-GitHub Actions in each repo enforce these rules. The checks live in `.github/scripts/workflow-checks.js`.
+GitHub Actions in each repo enforce these rules. The checks live in `.github/scripts/workflow-checks.cjs`.
 
 | Workflow | When it runs | What it enforces |
 |---|---|---|
