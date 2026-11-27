@@ -92,7 +92,7 @@ chore/78-security-test
   - **Related Issue:** `Closes #123`, or `Closes owner/repo#123` for an issue in another repo. "Closes" closes the issue automatically on merge.
   - **What Changed:** one bullet per change.
   - **Proof of Testing:** one checkbox per thing tested, with steps and results.
-- **Check that the build passes before opening the PR.** See the repo's `CLAUDE.md` for the exact commands.
+- **Check that the build passes before opening the PR.** See the repo's `CLAUDE.md` for the exact commands. `ci.yml` runs them again on the PR.
 - **One issue per PR** where possible. Keep PRs small enough to review in one sitting.
 
 ## AI agents
@@ -123,9 +123,23 @@ GitHub Actions in each repo enforce these rules. The checks live in `.github/scr
 |---|---|---|
 | `sync-readiness-labels.yml` | An issue gets `ready-for-dev` or `needs-refinement` | Checks the definition of ready (1 to 4). If the check fails, it swaps the label back to `needs-refinement` and comments with what's missing. It keeps the labels mutually exclusive and moves the card between Backlog and Ready. |
 | `pr-checks.yml` | A PR is opened, edited, pushed to, or relabeled | Fails the check unless the PR links an issue labeled `ready-for-dev` and fills in **What Changed** and **Proof of Testing**. The owner's `skip-issue-check` label skips the issue-link rule. So do docs PRs that `doc-sync.yml` opens. |
+| `ci.yml` (`rpdr-fantasy-league` and `rpdr-fantasy-web` only) | A PR is opened or pushed to, and every push to `main` | Builds and tests the code. League runs **Build** (`npm run build`) and **Test** (`npm test`, skipped until the first backend test exists). Web runs **Build**, **Lint** (`npm run lint`) and **Test** (`npm test`). |
 | `doc-sync.yml` (`rpdr-fantasy-league` and `rpdr-fantasy-web` only) | A PR merges into `main` | Claude reads the merge diff and fixes the `docs/` files it made wrong. If any doc changed, the workflow opens a PR from `docs/sync-pr-<N>` and links it on the merged PR. It skips docs-only PRs and its own PRs, keeps only edits under `docs/`, and never edits this file. |
 
 Board sync uses the `PROJECT_TOKEN` repo secret, a classic token with the `project` scope. If board moves stop working, the token has probably expired. Generate a new one and update the secret in all three repos.
+
+### Branch protection
+
+`main` in `rpdr-fantasy-league` is protected:
+
+- Every change goes through a PR. Nobody can push to `main` directly, the owner included.
+- These checks must pass before merging: **Linked ready-for-dev issue and filled-in template** (`pr-checks.yml`), **Build** and **Test** (`ci.yml`).
+- Open review conversations must be resolved before merging. No approving review is required, since there's one owner.
+- Force-pushing to `main` and deleting it are blocked.
+
+`rpdr-fantasy-web` is a private repo on GitHub Free, which doesn't support branch protection. There, the checks run and report but don't block merging. `rpdr-fantasy-ios-app` isn't protected yet.
+
+If you rename a job in `ci.yml` or `pr-checks.yml`, update the required checks under Settings → Branches in the same change, or every PR will wait for a check that never reports.
 
 ### Doc sync
 
@@ -133,4 +147,4 @@ Docs PRs from `doc-sync.yml` are opened by `github-actions[bot]`. Review them li
 
 Doc sync needs two things in each repo that runs it: the `ANTHROPIC_API_KEY` repo secret, and **Allow GitHub Actions to create and approve pull requests** turned on under Settings → Actions → General. Every merge that touches code costs one Claude run.
 
-GitHub doesn't start other workflows for PRs that `github-actions[bot]` opens, so `pr-checks` first runs on a docs PR when someone pushes to its branch.
+GitHub doesn't start other workflows for PRs that `github-actions[bot]` opens, so `pr-checks` and `ci` don't run on a docs PR until something new happens to it. In `rpdr-fantasy-league` those checks are required, so close and reopen the docs PR (or push to its branch) to start them before merging.

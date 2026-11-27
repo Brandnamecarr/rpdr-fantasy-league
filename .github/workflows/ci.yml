@@ -1,0 +1,53 @@
+# Builds and tests every PR and every push to main. Rules: docs/workflow.md.
+# Branch protection on main requires the "Build" check (job name below), so
+# keep job names stable or update the protection rule when they change.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # matches the Dockerfile
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      # jest.config.js points at src/__tests__, which doesn't exist until the
+      # first backend test is written. Jest rejects a missing root, so skip until then.
+      - name: Run tests
+        run: |
+          if [ -z "$(find src/__tests__ -name '*.test.ts' 2>/dev/null)" ]; then
+            echo "::notice::No backend tests yet (src/__tests__/**/*.test.ts). Skipping jest."
+            exit 0
+          fi
+          npm test
