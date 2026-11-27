@@ -6,6 +6,8 @@ Express + Prisma + PostgreSQL backend for RPDR Fantasy. The frontend lives in th
 
 **Before starting any work, read [docs/workflow.md](docs/workflow.md).** Only work on issues labeled `ready-for-dev`. Never add `ready-for-dev` or `skip-issue-check` yourself, and never merge a PR unless the owner asks.
 
+**To file an issue, use the `issue-creator` skill** ([.claude/skills/issue-creator/SKILL.md](.claude/skills/issue-creator/SKILL.md)). It labels the issue `needs-refinement`, and the owner adds `ready-for-dev` once it's good.
+
 Rules that matter most:
 - Layers: `routes/` → `controllers/` → `services/` → `prisma`. See [docs/style.md](docs/style.md) and follow it rather than the nearest legacy file.
 - Take the caller's identity from `req.user.email`, never from the body or query. Emails are stored UPPERCASE.

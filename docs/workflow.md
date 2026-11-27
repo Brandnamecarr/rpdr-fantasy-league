@@ -22,7 +22,7 @@ Use **New issue** on GitHub. The form has two required sections:
 - **Description:** what needs to happen and why, with any context, screenshots or links.
 - **Acceptance Criteria:** one checkbox per testable outcome. If you can't write a checkbox for it, the issue isn't understood yet.
 
-Issues created from the CLI or API skip the form. Use the same `### Description` and `### Acceptance Criteria` headings by hand.
+Issues created from the CLI or API skip the form. Use the same `### Description` and `### Acceptance Criteria` headings by hand. AI agents in `rpdr-fantasy-league` and `rpdr-fantasy-web` use the `issue-creator` skill (`.claude/skills/issue-creator/`). It writes the issue in this format, with a **Why:** justification, and validates the body and labels before creating it.
 
 ### Labels
 
@@ -101,7 +101,7 @@ AI agents (Claude Code and others) follow everything above. Specifically:
 
 **Agents may, without asking:**
 - read issues, PRs, code and the board
-- create issues using the Description and Acceptance Criteria format, labeled `needs-refinement` plus one `type:` and at least one `area:` label
+- create issues using the Description and Acceptance Criteria format, labeled `needs-refinement` plus one `type:` and at least one `area:` label, following the `issue-creator` skill where the repo has it
 - improve an issue's description and acceptance criteria, and suggest that it's ready
 - pick up an issue that is **already** labeled `ready-for-dev`: create the branch, implement, test, and open a PR that follows the template
 - move the issue they're working on to **In progress** or **In review**
