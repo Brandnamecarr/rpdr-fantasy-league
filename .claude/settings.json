@@ -1,0 +1,67 @@
+{
+  "permissions": {
+    "additionalDirectories": ["../.worktrees/"],
+    "allow": [
+      "Edit",
+      "Write",
+      "Bash(cd *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npm ci)",
+      "Bash(npm install *)",
+      "Bash(npm update *)",
+      "Bash(npx prisma generate)",
+      "Bash(npx tsc *)",
+      "Bash(npx jest *)",
+      "Bash(npx vitest *)",
+      "Bash(npx eslint *)",
+      "Bash(node .claude/implement-issue/scripts/*)",
+      "Bash(node .claude/skills/issue-creator/check-issue.cjs *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git fetch *)",
+      "Bash(git branch *)",
+      "Bash(git rev-parse *)",
+      "Bash(git ls-remote *)",
+      "Bash(git worktree *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push * main*)",
+      "Bash(git push * master*)",
+      "Bash(git push * HEAD:main*)",
+      "Bash(git push * --delete *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh issue edit * --add-label*ready-for-dev*)",
+      "Bash(gh issue edit * --add-label*skip-issue-check*)",
+      "Bash(gh issue edit * --add-label*design-approved*)",
+      "Bash(gh pr edit * --add-label*ready-for-dev*)",
+      "Bash(gh pr edit * --add-label*skip-issue-check*)",
+      "Bash(gh pr edit * --add-label*design-approved*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/implement-issue/scripts/guard.cjs\""
+          }
+        ]
+      }
+    ]
+  }
+}
