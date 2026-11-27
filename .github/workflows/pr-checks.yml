@@ -4,6 +4,8 @@
 #   - the "What Changed" and "Proof of Testing" template sections are filled in
 # The owner can add the `skip-issue-check` label to skip the linked-issue rule for
 # housekeeping PRs. AI agents must never add that label themselves.
+# Docs PRs opened by doc-sync.yml (author github-actions[bot], branch docs/sync-*)
+# link the merged PR instead of an issue, so they skip the linked-issue rule too.
 name: PR checks
 
 on:
@@ -32,9 +34,12 @@ jobs:
             const labels = pr.labels.map((l) => l.name);
             const problems = checkPrBody(pr.body);
             const passed = [];
+            const isDocSync = pr.user.login === 'github-actions[bot]' && pr.head.ref.startsWith('docs/sync-');
 
             if (labels.includes('skip-issue-check')) {
               core.notice('`skip-issue-check` label present: the linked-issue rule was skipped.');
+            } else if (isDocSync) {
+              core.notice('Doc-sync PR opened by doc-sync.yml: the linked-issue rule was skipped.');
             } else {
               const links = linkedIssues(pr.body, context.repo);
               if (links.length === 0) {

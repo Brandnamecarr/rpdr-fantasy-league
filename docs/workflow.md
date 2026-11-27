@@ -122,6 +122,15 @@ GitHub Actions in each repo enforce these rules. The checks live in `.github/scr
 | Workflow | When it runs | What it enforces |
 |---|---|---|
 | `sync-readiness-labels.yml` | An issue gets `ready-for-dev` or `needs-refinement` | Checks the definition of ready (1 to 4). If the check fails, it swaps the label back to `needs-refinement` and comments with what's missing. It keeps the labels mutually exclusive and moves the card between Backlog and Ready. |
-| `pr-checks.yml` | A PR is opened, edited, pushed to, or relabeled | Fails the check unless the PR links an issue labeled `ready-for-dev` and fills in **What Changed** and **Proof of Testing**. The owner's `skip-issue-check` label skips the issue-link rule. |
+| `pr-checks.yml` | A PR is opened, edited, pushed to, or relabeled | Fails the check unless the PR links an issue labeled `ready-for-dev` and fills in **What Changed** and **Proof of Testing**. The owner's `skip-issue-check` label skips the issue-link rule. So do docs PRs that `doc-sync.yml` opens. |
+| `doc-sync.yml` (`rpdr-fantasy-league` and `rpdr-fantasy-web` only) | A PR merges into `main` | Claude reads the merge diff and fixes the `docs/` files it made wrong. If any doc changed, the workflow opens a PR from `docs/sync-pr-<N>` and links it on the merged PR. It skips docs-only PRs and its own PRs, keeps only edits under `docs/`, and never edits this file. |
 
 Board sync uses the `PROJECT_TOKEN` repo secret, a classic token with the `project` scope. If board moves stop working, the token has probably expired. Generate a new one and update the secret in all three repos.
+
+### Doc sync
+
+Docs PRs from `doc-sync.yml` are opened by `github-actions[bot]`. Review them like any other PR: check each edit against the code, then merge or close. Nobody, the workflow included, merges them automatically. Fixing a doc in your own PR is still the rule. Doc sync catches what slips through.
+
+Doc sync needs two things in each repo that runs it: the `ANTHROPIC_API_KEY` repo secret, and **Allow GitHub Actions to create and approve pull requests** turned on under Settings → Actions → General. Every merge that touches code costs one Claude run.
+
+GitHub doesn't start other workflows for PRs that `github-actions[bot]` opens, so `pr-checks` first runs on a docs PR when someone pushes to its branch.
