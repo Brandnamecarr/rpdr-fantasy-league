@@ -18,3 +18,6 @@ dist/*
 # Any env file except the committed template
 .env.*
 !.env.sample
+
+# /implement-issue run scratch space
+.claude/implement-issue/runs/

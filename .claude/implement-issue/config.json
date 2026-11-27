@@ -1,0 +1,32 @@
+{
+  "owner": "Brandnamecarr",
+  "trustedCommenters": ["github-actions[bot]"],
+  "approvalLabel": "design-approved",
+  "ownerOnlyLabels": ["ready-for-dev", "skip-issue-check", "design-approved"],
+  "limits": { "designRounds": 2, "verifyLoops": 3 },
+  "worktreeRoot": "../.worktrees",
+  "commitTrailer": "Pipeline-Run: implement-issue",
+  "coAuthor": "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>",
+  "repos": {
+    "rpdr-fantasy-league": {
+      "sibling": "../rpdr-fantasy-web",
+      "setup": ["npm ci", "npx prisma generate"],
+      "build": "npm run build",
+      "lintJson": null,
+      "testJson": "npx jest --json --outputFile={out}",
+      "testDir": "src/__tests__",
+      "testFilePattern": "\\.test\\.ts$",
+      "strict": true
+    },
+    "rpdr-fantasy-web": {
+      "sibling": "../rpdr-fantasy-league",
+      "setup": ["npm ci"],
+      "build": "npm run build",
+      "lintJson": "npx eslint . -f json -o {out}",
+      "testJson": "npx vitest run --reporter=json --outputFile={out}",
+      "testDir": null,
+      "testFilePattern": "\\.test\\.tsx?$",
+      "strict": false
+    }
+  }
+}
