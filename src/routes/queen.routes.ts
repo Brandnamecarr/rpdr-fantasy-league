@@ -1,7 +1,7 @@
 // Doc: Route definitions for queen management endpoints. All routes are protected by JWT authentication.
 // Doc: Base path: /queens (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect } from "../util/credentials/TokenManager";
+import { protect, requireAdmin } from "../util/credentials/TokenManager";
 import * as queenController from '../controllers/queen.controller';
 
 const router = Router();
@@ -18,11 +18,11 @@ router.get("/getQueensByFranSeas", queenController.getByFranchiseAndSeason);
 router.get("/getQueenStatus", queenController.getQueenStatus);
 
 // Doc: POST /queens/addNewQueen - Creates a new queen record (body: {name, franchise, season, status, location})
-router.post("/addNewQueen", queenController.addNewQueen);
+router.post("/addNewQueen", requireAdmin, queenController.addNewQueen);
 // Doc: POST /queens/addNewQueens - Creates multiple queen records in bulk (body: array of queen objects)
-router.post("/addNewQueens", queenController.addNewQueens);
+router.post("/addNewQueens", requireAdmin, queenController.addNewQueens);
 // Doc: POST /queens/updateQueenStatus - Updates a queen's status (body: {name, franchise, season, status})
-router.post("/updateQueenStatus", queenController.updateQueenStatus);
+router.post("/updateQueenStatus", requireAdmin, queenController.updateQueenStatus);
 // Doc: POST /queens/getQueenId - Retrieves a queen's ID (body: {franchise, season, name})
 router.post("/getQueenId", queenController.getQueenId);
 

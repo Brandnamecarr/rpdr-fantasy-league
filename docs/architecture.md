@@ -46,7 +46,9 @@ Services signal business-rule failures by **throwing string error codes** (e.g. 
 | `protect` | `Authorization: Bearer <JWT>`. The JWT is signed with `JWT_SECRET`, expires after **1h**, and carries `{id, email}`. The decoded payload goes on `req.user` (`AuthRequest`). | Most routers, via `router.use(protect)` |
 | `protectAdmin` | `Authorization: Bearer <ADMIN_API_KEY>`. A static key that never expires. | `/admin/*`, `/users/setAdmin` |
 | `isAdminEmail()` | Checks the email against the `ADMIN_EMAIL` comma-separated allowlist, case-insensitively. | Admin-only checks inside notification handlers. `GET /admin/getJwt` mints a JWT for the first allowlisted user. |
-| `User.isAdmin` | A database flag set through `POST /users/setAdmin`. | Only one place: `updateSeason` checks it before allowing a status change to `INACTIVE`. |
+| `User.isAdmin` | A database flag set through `POST /users/setAdmin`. | `updateSeason` checks it before allowing a status change to `INACTIVE`. |
+
+**`requireAdmin`** (in `TokenManager.ts`) combines the last two: mount it after `protect`, and it lets the caller through if their JWT email is allowlisted (`isAdminEmail`) **or** their `User.isAdmin` flag is set. Otherwise it returns 403. Use it for any JWT route that changes shared data (scoring, surveys, queens, seasons) or lists users. The admin panel's `/admin/getJwt` token passes it.
 
 The JWT comes from `POST /users/auth` (log in) or `POST /users/create` (sign up). There is **no refresh token**: after an hour the user has to log in again.
 

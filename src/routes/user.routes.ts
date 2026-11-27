@@ -1,7 +1,7 @@
 // Doc: Route definitions for user management endpoints. Auth and create routes are public; other routes require JWT authentication.
 // Doc: Base path: /users (or similar, depending on app.ts configuration)
 import { Router } from "express";
-import { protect, protectAdmin } from "../util/credentials/TokenManager";
+import { protect, protectAdmin, requireAdmin } from "../util/credentials/TokenManager";
 import * as userController from "../controllers/user.controller";
 
 const router = Router();
@@ -12,13 +12,13 @@ router.post("/auth", userController.authenticateUser);
 router.post("/create", userController.createUser);
 
 // Doc: GET /users/getAll - Retrieves all users (protected route)
-router.get("/getAll", protect, userController.getUsers);
+router.get("/getAll", protect, requireAdmin, userController.getUsers);
 // Doc: POST /users/updatePassword - Updates a user's password (body: {email, oldPassword, newPassword}) - Protected route
 router.post("/updatePassword", protect, userController.updatePassword);
 // Doc: GET /users/getUserRecord?email=user@example.com - Retrieves a user's complete record with leagues and rosters (protected route)
 router.get('/getUserRecord', protect, userController.getUserRecord);
 // Doc: GET /users/getAllEmails - Retrieves all user email addresses (protected route)
-router.get('/getAllEmails', protect, userController.getAllEmails);
+router.get('/getAllEmails', protect, requireAdmin, userController.getAllEmails);
 // Doc: PATCH /users/displayName - Updates the authenticated user's display name (body: {displayName: string}) - Protected route
 router.patch('/displayName', protect, userController.updateDisplayName);
 // Doc: POST /users/getDisplayNames - Retrieves display names for a list of emails (body: {emails: string[]}) - Protected route
