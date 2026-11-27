@@ -1,0 +1,151 @@
+# Keeps docs/ in sync with the code. Runs after a PR merges into main:
+#   1. Skips PRs that changed only docs/, and its own docs/sync-* PRs (no loop).
+#   2. Claude reads the merge diff and edits the docs/ files it made wrong.
+#   3. Only edits under docs/ are kept (never docs/workflow.md). If any remain,
+#      it opens a PR from docs/sync-pr-<N> for the owner to review. It never merges.
+# Rules: docs/workflow.md.
+# Setup (owner only): the ANTHROPIC_API_KEY repo secret, and Settings > Actions >
+# General > "Allow GitHub Actions to create and approve pull requests".
+# This file is identical in rpdr-fantasy-league and rpdr-fantasy-web.
+name: Doc sync
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: doc-sync
+  cancel-in-progress: false
+
+jobs:
+  sync-docs:
+    name: Update docs for the merged PR
+    if: github.event.pull_request.merged == true && !startsWith(github.event.pull_request.head.ref, 'docs/sync-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      # MERGE_SHA^1..MERGE_SHA is the whole PR for merge and squash merges.
+      # For a rebase merge it's only the last commit.
+      - name: List what the PR changed
+        id: changes
+        run: |
+          git diff --name-only "$MERGE_SHA^1" "$MERGE_SHA" | tee "$RUNNER_TEMP/changed.txt"
+          if grep -qv '^docs/' "$RUNNER_TEMP/changed.txt"; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Only docs/ changed. Nothing to sync."
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update docs with Claude
+        if: steps.changes.outputs.code == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ github.token }}
+          claude_args: |
+            --model claude-opus-5-5
+            --max-turns 40
+            --permission-mode default
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+          prompt: |
+            PR #${{ github.event.pull_request.number }} in ${{ github.repository }} was just merged into main
+            as commit ${{ github.event.pull_request.merge_commit_sha }}. Your job: make docs/ accurate again
+            after that change. The working tree is main.
+
+            1. Read docs/README.md, then the docs it links to.
+            2. Read the change: `git log -1 ${{ github.event.pull_request.merge_commit_sha }}` and
+               `git diff ${{ github.event.pull_request.merge_commit_sha }}^1 ${{ github.event.pull_request.merge_commit_sha }}`.
+            3. Find every doc statement the change made wrong or incomplete, and fix it so it matches
+               the code on main. Check the code itself, not the commit message. If a doc and the code
+               disagree, the code wins. Typical cases:
+               - routes, request/response shapes, enums, workflow IDs, cross-repo contracts
+               - schema and data-model changes
+               - a sharp edge that was fixed: delete its entry in docs/gotchas.md
+               - a new sharp edge: add an entry to docs/gotchas.md
+               - a recipe whose steps no longer work
+            4. If you edited any doc, set the "Last verified against `main` @ `<sha>` (<date>)" line in
+               docs/README.md to the merge commit's 7-character SHA and today's UTC date. Do the same for
+               the `main @ <sha>` stamp in any other doc you edited that has one.
+
+            Rules:
+            - Edit only files under docs/. Never edit docs/workflow.md: it must stay identical across
+              the sibling repos, and only the owner changes it.
+            - Match the existing structure, tone and level of detail. Don't restate code, and don't add
+              new docs unless the change adds something no existing doc covers.
+            - Don't touch statements the change didn't affect, unless you find one that's plainly false.
+            - If nothing needs to change, change nothing.
+            - The sibling repos are rpdr-fantasy-league (backend API), rpdr-fantasy-web (React app) and
+              rpdr-fantasy-ios-app. You can't edit them. If their docs or code need a matching change,
+              say so in the summary.
+
+            Last, write `.doc-sync-summary.md` at the repo root. It isn't committed. It becomes the PR body:
+
+            ## What Changed
+            - one bullet per doc file you edited: what you changed and which code change made it necessary
+
+            ## Sibling repos
+            - docs or code in another repo that need a matching change, or "None"
+
+            If you changed nothing, write only the line NO_CHANGES.
+
+      - name: Open a docs PR
+        if: steps.changes.outputs.code == 'true'
+        run: |
+          summary="$RUNNER_TEMP/summary.md"
+          mv .doc-sync-summary.md "$summary" 2>/dev/null || echo "NO_CHANGES" > "$summary"
+
+          # Keep only edits under docs/, and never docs/workflow.md.
+          git restore --source=HEAD --staged --worktree -- ':(exclude)docs'
+          git restore --source=HEAD --staged --worktree -- docs/workflow.md
+          git clean -fdq -- ':(exclude)docs'
+
+          if [ -z "$(git status --porcelain -- docs)" ]; then
+            echo "Docs already match the code. Nothing to do."
+            exit 0
+          fi
+
+          branch="docs/sync-pr-$PR_NUMBER"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add docs
+          git commit -q -m "Sync docs with #$PR_NUMBER"
+          git push -q origin "$branch"
+
+          {
+            echo "## Title"
+            echo "Sync docs with #$PR_NUMBER"
+            echo
+            echo "## Related Issue"
+            echo "Relates to #$PR_NUMBER. Opened by the Doc sync workflow after that PR merged."
+            echo
+            if grep -q '^## What Changed' "$summary"; then
+              cat "$summary"
+            else
+              echo "## What Changed"
+              git diff --name-only HEAD^ HEAD | sed 's/^/- Updated `/; s/$/`/'
+            fi
+            echo
+            echo "## Proof of Testing"
+            echo "- [ ] Owner checked each doc edit against the code on \`main\`"
+            echo "  - Steps: read the diff of #$PR_NUMBER next to this PR's diff"
+            echo "  - Result:"
+          } > "$RUNNER_TEMP/body.md"
+
+          url=$(gh pr create --base main --head "$branch" --title "Sync docs with #$PR_NUMBER" --body-file "$RUNNER_TEMP/body.md")
+          gh pr comment "$PR_NUMBER" --body "Doc sync opened $url to bring \`docs/\` in line with this change."
